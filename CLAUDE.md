@@ -29,6 +29,7 @@
 
 ## 布局
 
+- 启动：`rcstudio`（= `bash start.sh`，第一次自动装这个命令；Finder 双击 `RC Studio.command` 也行）。先只开 RC Studio :8090；驾驶服务器 :8080/:8443 在 Studio 里开关（`server.js` 的 `startDrive/stopDrive`），`rcstudio --drive` 一起开。
 - 根目录：`server.js`（Node，ws :8080 / https :8443）、`ui.html`（驾驶端）、`rc_car.ino`（ESP32 固件）、`flash.sh`/`reflash.sh`/`start.sh`/`logs.sh`、`wiring.html`、`pit_display/`。
 - `HANDOFF.md`：历史交接；`PLATFORM_DESIGN.md`：RC Studio 平台设计（Phase 0–6），按它做。
 - `admin.js`：RC Studio 后端（127.0.0.1:8090，WS `/admin` + `/api/*`）。`lib/`：jobs、ports、builds、firmware、projects、secrets。`targets.json`：板子型号（fqbn、芯片）。

@@ -662,15 +662,6 @@ function onUpgrade(req, sock, head) {
   else sock.destroy();
 }
 server.on('upgrade', onUpgrade);
-// https：同一套网页和 WebSocket，只是加密了（车还是走 8080 的 http，不受影响）
-try {
-  const key = fs.readFileSync(path.join(DIR, 'certs', 'key.pem')), cert = fs.readFileSync(path.join(DIR, 'certs', 'cert.pem'));
-  const sserver = https.createServer({ key, cert }, onRequest);
-  sserver.on('upgrade', onUpgrade);
-  sserver.on('error', e => console.log(`https 开不了（${e.code}）：陀螺仪转向用不了，其他不影响`));
-  sserver.listen(HTTPS_PORT, '0.0.0.0', () => { httpsUp = true; });
-} catch { console.log('没有 https 证书（certs/）：用 bash start.sh 启动会自动生成。陀螺仪转向需要它'); }
-
 wssCar.on('connection', ws => {
   ws.on('message', buf => { let m; try { m = JSON.parse(buf); } catch { return; } onCarMessage(ws, m); });
   ws.on('close', () => {
@@ -716,21 +707,72 @@ function lanIps() {
     .filter(i => i && i.family === 'IPv4' && !i.internal).map(i => i.address);
 }
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log('\n RC 服务器已启动');
-  for (const ip of lanIps()) console.log(`   手机/电脑打开： http://${ip}:${PORT}      （要用手机陀螺仪转向：https://${ip}:${HTTPS_PORT}）`);
-  console.log(`   本机：          http://localhost:${PORT}`);
-  const ip0 = lanIps()[0];
-  if (ip0) console.log(`   管理链接（手机校准/自检/升级用，别发给别人）： http://${ip0}:${PORT}/?admin=${ADMIN_TOKEN}`);
-  console.log('   等车连上…（Ctrl+C 关闭）\n');
-});
+// ---------------- 驾驶服务器（8080 / 8443）：RC Studio 里开关 ----------------
+// 车和手机都连这里。关掉 = 断开所有车和手机（车会刹停，等再开时自动重连）
+let sserver = null;
+const drive = { running: false, since: null, error: null };
+function driveStatus() {
+  return { ...drive, port: PORT, httpsPort: httpsUp ? HTTPS_PORT : null, cars: [...cars.values()].filter(c => c.online).length, phones: clients.size,
+    urls: drive.running ? lanIps().map(ip => `http://${ip}:${PORT}/`) : [] };
+}
+function startDrive() {
+  return new Promise((resolve, reject) => {
+    if (drive.running) return resolve(driveStatus());
+    const onErr = e => {
+      server.off('listening', onOk);
+      drive.error = e.code === 'EADDRINUSE' ? `端口 ${PORT} 被占用：是不是另一个 node server.js 还开着？（终端 Ctrl+C 关掉它）` : e.message;
+      reject(new Error(drive.error));
+    };
+    const onOk = () => {
+      server.off('error', onErr);
+      drive.running = true; drive.since = Date.now(); drive.error = null;
+      // https：同一套网页和 WebSocket，只是加密了（手机陀螺仪要它；车还是走 8080 的 http）
+      try {
+        const key = fs.readFileSync(path.join(DIR, 'certs', 'key.pem')), cert = fs.readFileSync(path.join(DIR, 'certs', 'cert.pem'));
+        sserver = https.createServer({ key, cert }, onRequest);
+        sserver.on('upgrade', onUpgrade);
+        sserver.on('error', e => { console.log(`https 开不了（${e.code}）：陀螺仪转向用不了，其他不影响`); httpsUp = false; });
+        sserver.listen(HTTPS_PORT, '0.0.0.0', () => { httpsUp = true; });
+      } catch { console.log('没有 https 证书（certs/）：用 bash start.sh 启动会自动生成。陀螺仪转向需要它'); }
+      console.log('\n ▶ 驾驶服务器已开');
+      for (const ip of lanIps()) console.log(`   手机/电脑打开： http://${ip}:${PORT}      （要用手机陀螺仪转向：https://${ip}:${HTTPS_PORT}）`);
+      const ip0 = lanIps()[0];
+      if (ip0) console.log(`   管理链接（手机校准/自检/升级用，别发给别人）： http://${ip0}:${PORT}/?admin=${ADMIN_TOKEN}`);
+      console.log('   等车连上…\n');
+      logEvent('server', { msg: '驾驶服务器开了' });
+      resolve(driveStatus());
+    };
+    server.once('error', onErr);
+    server.once('listening', onOk);
+    server.listen(PORT, '0.0.0.0');
+  });
+}
+function stopDrive() {
+  return new Promise(resolve => {
+    if (!drive.running) return resolve(driveStatus());
+    for (const c of cars.values()) { if (c.online && c.ws) { try { send(c.ws, { t: 'stop' }); } catch { } } }   // 先让车刹停
+    for (const w of [wssCar, wssUi, wssPit]) for (const ws of w.clients) { try { ws.close(1001, 'server stopping'); } catch { } }
+    let n = sserver ? 2 : 1; const done = () => { if (--n === 0) { drive.running = false; drive.since = null; httpsUp = false; sserver = null; console.log(' ■ 驾驶服务器已关'); resolve(driveStatus()); } };
+    server.close(done); if (server.closeAllConnections) server.closeAllConnections();
+    if (sserver) { sserver.close(done); if (sserver.closeAllConnections) sserver.closeAllConnections(); }
+    setTimeout(() => { for (const w of [wssCar, wssUi, wssPit]) for (const ws of w.clients) { try { ws.terminate(); } catch { } } }, 1500);
+  });
+}
 
 setInterval(() => { const t = now(); for (const [k, v] of otaTokens) if (v.exp < t) otaTokens.delete(k); }, 30000);
 
-// ---------------- 管理平面（RC Studio，只绑 127.0.0.1） ----------------
+// ---------------- 启动 ----------------
+// 默认只开 RC Studio（127.0.0.1:8090），驾驶服务器在 Studio 里开。
+//   node server.js           Studio；如果设置了「开机自动开驾驶服务器」就一起开
+//   node server.js --drive   Studio + 驾驶服务器一起开（旧的用法）
+const wantDrive = process.argv.includes('--drive') || process.env.RC_DRIVE === '1' || !!SECRETS.driveAutostart;
+console.log('\n RC 服务器');
 if (process.env.RC_NO_ADMIN !== '1') {
   require('./admin').start({
     cars, clients, carSummary, send, toUis, broadcastState, diag, logEvent, startOta, lanIps,
     PORT, secrets: SECRETS, saveSecrets: () => secrets.save(SECRETS), FW_DIR,
+    drive: { start: startDrive, stop: stopDrive, status: driveStatus },
   });
 }
+if (wantDrive || process.env.RC_NO_ADMIN === '1') startDrive().catch(e => console.log('   ✗ 驾驶服务器开不了：' + e.message));
+else console.log('   驾驶服务器（8080）没开：在 RC Studio 里点「开」\n');

@@ -13,7 +13,7 @@ async function demoCall(a: string, args: any): Promise<any> {
   const local = () => { try { return JSON.parse(localStorage.getItem(LS + 'list') || '[]'); } catch { return []; } };
   switch (a) {
     case 'status': return { cars: [], ports: [], portsError: null, serialOk: true, monitors: [], targets: idx.targets, builds: [], jobs: [], version: idx.version,
-      settings: { wifi: {}, wifiDefault: 'home', host: '', ip: '', otaPassword: false }, projects: [...idx.projects, ...local().filter((p: any) => !idx.projects.some((q: any) => q.id === p.id))], driveUrl: null, adminUrl: null };
+      settings: { wifi: {}, wifiDefault: 'home', host: '', ip: '', otaPassword: false }, projects: [...idx.projects, ...local().filter((p: any) => !idx.projects.some((q: any) => q.id === p.id))], drive: null, driveUrl: null, adminUrl: null };
     case 'library': return getJson('./data/library.json');
     case 'projectGet': { try { const v = localStorage.getItem(LS + 'p.' + args.id); if (v) return JSON.parse(v); } catch { } return getJson(`./data/projects/${args.id}.json`); }
     case 'projectSave': try { localStorage.setItem(LS + 'p.' + args.id, JSON.stringify(args.doc)); } catch { } return { ok: true };
@@ -41,6 +41,7 @@ export function connect() {
       case 'serial': { const L = { ...s.serial }; L[m.port] = (L[m.port] || []).concat(m.line).slice(-1000); s.set({ serial: L }); break; }
       case 'ports': if (s.st) s.set({ st: { ...s.st, ports: m.ports } }); break;
       case 'cars': if (s.st) s.set({ st: { ...s.st, cars: m.cars } }); break;
+      case 'drive': if (s.st) s.set({ st: { ...s.st, drive: m.drive } }); break;
       case 'monitor': refresh(); break;
     }
   };

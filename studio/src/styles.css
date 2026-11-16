@@ -177,3 +177,11 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: v
 .dim2d line { stroke: #7fd3ff; stroke-width: 1; pointer-events: none; }
 .dim2d text { fill: #cdeeff; font: 600 11px var(--mono); pointer-events: none; paint-order: stroke; stroke: #000; stroke-width: 3px; }
 .dim2d text.hz { fill: #9bb; font-weight: 500; }
+
+.drive { flex-direction: column; } .drive.on { border-color: #30d15840; }
+.drive-row { display: flex; align-items: center; gap: 12px; }
+.lamp { width: 12px; height: 12px; border-radius: 50%; background: #444; flex: none; }
+.lamp.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+.drive code { margin-right: 6px; }
+.pill.btn { border: 0; cursor: pointer; text-align: left; }
+.pill.off { background: #ffffff10; color: var(--dim); }

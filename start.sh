@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
-# 启动 Mac 服务器：bash start.sh
-# 第一次会自动装 Node.js 和 ws（约 1–2 分钟），之后秒开。
+# 启动 RC Studio：rcstudio（第一次跑 bash start.sh 会装好 rcstudio 命令）
+# 先开 RC Studio（http://127.0.0.1:8090，只有这台 Mac 能开）；驾驶服务器（8080，车和手机连的）在 Studio 里开关。
+#   rcstudio           开 Studio
+#   rcstudio --drive   Studio + 驾驶服务器一起开
+# 第一次会自动装 Node.js 和依赖（约 1–2 分钟），之后秒开。
 set -euo pipefail
 cd "$(dirname "$0")"
+STUDIO="http://127.0.0.1:${RC_ADMIN_PORT:-8090}/"
+
+# 已经开着：直接打开网页
+if curl -s -m 1 -o /dev/null "${STUDIO}api/status" 2>/dev/null; then
+  echo "RC Studio 已经开着：${STUDIO}"
+  [[ " $* " == *" --drive "* ]] && curl -s -m 5 -X POST -H 'content-type: application/json' -d '{}' "${STUDIO}api/driveStart" >/dev/null && echo "驾驶服务器开了"
+  open "$STUDIO" 2>/dev/null || true; exit 0
+fi
 
 if ! command -v node >/dev/null; then
   command -v brew >/dev/null || { echo "先装 Homebrew：https://brew.sh"; exit 1; }
@@ -35,6 +46,22 @@ if [[ ! -f certs/cert.pem || "$(cat certs/ip 2>/dev/null)" != "${IP}" ]]; then
   fi
 fi
 
-( sleep 1.5; open "http://127.0.0.1:8090/" 2>/dev/null || true ) &
+# rcstudio 命令（只装一次）：放到 PATH 里一个能写的地方
+if ! command -v rcstudio >/dev/null; then
+  HERE="$(pwd)"
+  for d in /opt/homebrew/bin /usr/local/bin "$HOME/.local/bin"; do
+    if [[ "$d" == "$HOME/.local/bin" ]]; then mkdir -p "$d"; fi
+    if [[ -d "$d" && -w "$d" ]]; then
+      printf '#!/bin/sh\n# RC Studio（rc-car 文件夹：%s）\nexec bash "%s/start.sh" "$@"\n' "$HERE" "$HERE" > "$d/rcstudio"; chmod +x "$d/rcstudio"
+      echo "▶ 装好了命令：rcstudio（$d/rcstudio），以后在任何地方打 rcstudio 就开"
+      if [[ "$d" == "$HOME/.local/bin" ]] && ! grep -q '.local/bin' "$HOME/.zshrc" 2>/dev/null; then
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.zshrc"; echo "  （加进了 ~/.zshrc，新开的终端才认得）"
+      fi
+      break
+    fi
+  done
+fi
+
+( sleep 1.5; open "$STUDIO" 2>/dev/null || true ) &
 echo "提示：macOS 弹出「是否允许 node 接受传入网络连接」时点【允许】，不然手机和车连不进来"
-exec node server.js
+exec node server.js "$@"

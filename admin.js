@@ -32,7 +32,12 @@ function start(core) {
   ports.on('monitor', m => push({ t: 'monitor', ...m }));
   // 车状态变了也推给 Studio（借用驾驶端的 broadcastState 时机：每 1 秒对比一次）
   let lastCars = '';
-  setInterval(() => { const s = JSON.stringify([...core.cars.values()].map(core.carSummary)); if (s !== lastCars) { lastCars = s; push({ t: 'cars', cars: JSON.parse(s) }); } }, 1000);
+  let lastDrive = '';
+  const driveView = () => core.drive ? { ...core.drive.status(), autostart: !!S.driveAutostart } : null;
+  setInterval(() => {
+    const s = JSON.stringify([...core.cars.values()].map(core.carSummary)); if (s !== lastCars) { lastCars = s; push({ t: 'cars', cars: JSON.parse(s) }); }
+    const d = JSON.stringify(driveView()); if (d !== lastDrive) { lastDrive = d; push({ t: 'drive', drive: JSON.parse(d) }); }
+  }, 1000);
   // USB 插拔：每 3 秒扫一次（arduino-cli 很快）
   let scanning = false;
   setInterval(async () => { if (scanning || wsClients.size === 0) return; scanning = true; try { await ports.scan(); } finally { scanning = false; } }, 3000);
@@ -51,6 +56,7 @@ function start(core) {
       version: fw.sketchVersion(ROOT),
       settings: settingsView(),
       projects: projects.list(ROOT),
+      drive: driveView(),
       driveUrl: core.lanIps()[0] ? `http://${core.lanIps()[0]}:${core.PORT}/` : null,
       adminUrl: core.lanIps()[0] ? `http://${core.lanIps()[0]}:${core.PORT}/?admin=${S.adminToken}` : null,
     };
@@ -64,6 +70,10 @@ function start(core) {
   // ------------- 动作（REST 和 WS 共用） -------------
   const actions = {
     status: () => status(),
+    // 驾驶服务器（8080/8443）开关
+    driveStart: async () => { const r = await core.drive.start(); push({ t: 'drive', drive: driveView() }); return r; },
+    driveStop: async () => { const r = await core.drive.stop(); push({ t: 'drive', drive: driveView() }); return r; },
+    driveAutostart: ({ on }) => { S.driveAutostart = !!on; core.saveSecrets(); return driveView(); },
     scan: async () => ({ ports: await ports.scan() }),
     build: ({ target, note }) => jobs.start({ kind: 'build', title: `编译 ${target}`, locks: ['compile:' + target] },
       ctx => fw.build(ctx, { root: ROOT, cli: CLI, targets: targets(), builds, target, note })).id,
@@ -197,8 +207,8 @@ function start(core) {
       ws.on('close', () => wsClients.delete(ws));
     });
   });
-  server.on('error', e => console.log(`   ⚠ RC Studio 开不了（${e.code === 'EADDRINUSE' ? `端口 ${ADMIN_PORT} 被占用` : e.message}），驾驶端照常`));
-  server.listen(ADMIN_PORT, '127.0.0.1', () => console.log(`   RC Studio（只有这台 Mac 能开）： http://127.0.0.1:${ADMIN_PORT}/`));
+  server.on('error', e => { console.log(`   ✗ RC Studio 开不了：${e.code === 'EADDRINUSE' ? `端口 ${ADMIN_PORT} 被占用（RC Studio 已经开着？直接打开 http://127.0.0.1:${ADMIN_PORT}/）` : e.message}`); process.exit(1); });
+  server.listen(ADMIN_PORT, '127.0.0.1', () => console.log(`   ▶ RC Studio（只有这台 Mac 能开）： http://127.0.0.1:${ADMIN_PORT}/`));
   return { server, jobs, ports, builds, act };
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { act } from '../api';
 import { JobList } from './Jobs';
+import { DriveCard } from './Drive';
 import type { Port, Car, Build } from '../types';
 
 export function Devices() {
@@ -10,6 +11,8 @@ export function Devices() {
   return (
     <div className="page">
       <header className="ph"><h1>设备</h1><p className="dim">插 USB 的板子在下面；连上 WiFi 的车在上面。第一次装车：选型号 → 车号 → <b>一键装车</b>（编译 → 刷机 → 写 WiFi）。</p></header>
+
+      <DriveCard />
 
       <section>
         <h2>在线的车 <span className="count">{st.cars.filter(c => c.online).length}</span></h2>

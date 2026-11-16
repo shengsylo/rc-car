@@ -5,6 +5,7 @@ import { Firmware } from './pages/Firmware';
 import { Settings } from './pages/Settings';
 import { Project } from './pages/Project';
 import { DEMO, act } from './api';
+import { DrivePill } from './pages/Drive';
 
 const TABS = [
   { id: 'devices', label: '设备', sub: '车 · USB · 刷机' },
@@ -32,7 +33,7 @@ export function App() {
         ))}
         <div className="side-foot">
           {DEMO ? <><div className="pill demo">网页演示版</div><div className="dim">改动只存在这个浏览器。编译/刷机要在 Mac 上开。</div><button className="ghost xs" onClick={async () => { if (confirm('清掉这个浏览器里的改动，回到原始项目？')) { await act('demoReset'); location.reload(); } }}>重置演示</button></> :
-          <div className={'pill ' + (connected ? 'ok' : 'bad')}>{connected ? '服务器在线' : '连不上服务器'}</div>}
+          <><div className={'pill ' + (connected ? 'ok' : 'bad')}>{connected ? 'Studio 在线' : '连不上 Studio'}</div><DrivePill /></>}
           <div className="mono dim">车在线 {online} · 任务 {running}</div>
           <div className="mono dim">固件源码 {st?.version ?? '–'}</div>
         </div>

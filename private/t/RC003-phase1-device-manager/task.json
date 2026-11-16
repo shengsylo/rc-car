@@ -37,6 +37,10 @@
     {
       "step": "Mac 上真机测试（红车 USB）",
       "status": "todo"
+    },
+    {
+      "step": "rcstudio 命令 + 驾驶服务器在 Studio 里开关",
+      "status": "done"
     }
   ],
   "issues": [],
@@ -56,6 +60,10 @@
     {
       "at": "2026-11-16",
       "text": "Phase 1 完成，等 Mac 上插红车真机测试。"
+    },
+    {
+      "at": "2026-11-16",
+      "text": "启动改成 `rcstudio` 命令（第一次 `bash start.sh` 自动装；也可双击 `RC Studio.command`）。默认只开 Studio :8090，驾驶服务器 :8080/:8443 在 Studio「设备」页或左下角开关，可设开机自动开。`rcstudio --drive` = 一起开。"
     }
   ]
 }
