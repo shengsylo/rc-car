@@ -1,0 +1,35 @@
+{
+ "name": "无源蜂鸣器",
+ "kind": "io",
+ "size": [
+  12,
+  12,
+  9.5
+ ],
+ "shape": "cyl",
+ "color": "#111",
+ "verified": false,
+ "pins": [
+  {
+   "id": "SIG",
+   "x": -3,
+   "y": 0,
+   "type": "logic_in",
+   "fw": "BUZ",
+   "v": [
+    0,
+    5
+   ],
+   "need": [
+    "pwm"
+   ]
+  },
+  {
+   "id": "GND",
+   "x": 3,
+   "y": 0,
+   "type": "gnd"
+  }
+ ],
+ "drawmA": 25
+}

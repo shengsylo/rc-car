@@ -1,33 +1,60 @@
 {
   "id": "RC009",
   "title": "Studio：3D 装配 + 动画（Phase 2 / 4）",
-  "status": "open",
+  "status": "active",
   "created": "2026-11-16",
-  "summary": "零件库、3D 摆放、适配检查；之后关节 + 遥测驱动动画。",
+  "summary": "3D 布局 + 动画，和接线图同一份数据。",
   "problem": "",
   "idea": "",
   "proof": [],
-  "solution": "",
+  "solution": "`projects/<id>/project.json`：零件 3D 位置是唯一真相；three.js 场景（Z 朝上），拖动/旋转（W/E，0.5mm、15° 吸附），车壳+禁区，穿模/超出车壳检查；动画时间轴（油门、转向两条曲线）驱动轮子转动和前轮转向。零件库 `library/`（17 个，`tools/gen_library.py` 生成）。",
   "path": [
     {
-      "step": "project.json + schema",
+      "step": "数据模型 + 零件库",
+      "status": "done"
+    },
+    {
+      "step": "3D 拖动/旋转 + 和 2D 同步",
+      "status": "done"
+    },
+    {
+      "step": "碰撞 / 车壳 / 禁区检查",
+      "status": "done"
+    },
+    {
+      "step": "动画时间轴",
+      "status": "done"
+    },
+    {
+      "step": "零件尺寸用实物量过（现在多数是估计）",
       "status": "todo"
     },
     {
-      "step": "8–10 个零件 part.json",
+      "step": "生成可打印的车架 STL（manifold-3d）",
       "status": "todo"
     },
     {
-      "step": "3D 摆放 + 俯视投影 + keep-in 适配检查",
-      "status": "todo"
-    },
-    {
-      "step": "carRig.js 关节 + 遥测绑定（Phase 4）",
+      "step": "动画跟真车数据同步（live）",
       "status": "todo"
     }
   ],
   "issues": [],
   "data": [],
-  "files": [],
-  "log": []
+  "files": [
+    "studio/src/project/View3D.tsx",
+    "studio/src/project/Timeline.tsx",
+    "studio/src/project/geom.ts",
+    "studio/src/project/collide.ts",
+    "library/",
+    "projects/",
+    "tools/gen_library.py",
+    "tools/gen_projects.py",
+    "lib/projects.js"
+  ],
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "3D 布局 + 动画做好；保时捷和红车两个示例项目。"
+    }
+  ]
 }

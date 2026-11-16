@@ -1,41 +1,61 @@
 {
   "id": "RC003",
   "title": "Phase 1 设备管理：UI 里刷机/日志/配网/OTA",
-  "status": "open",
+  "status": "done",
   "created": "2026-11-16",
-  "summary": "替换 flash.sh：插 USB → UI 点编译、烧录、配网、自检。",
+  "summary": "网页里编译、刷机、配网、看串口、无线升级。",
   "problem": "",
   "idea": "端口发现（arduino-cli board list）→ 选项目/target/车号 → 生成 pins.h（ERC 拦错）→ 编译 → BuildRegistry 入库 → 烧录（独占串口）→ NVS 配网（bin 里不再有密码）→ 等 /car hello 验证 → 自检。OTA 选版本 + sha256 + 3 次失败自动回退。",
-  "proof": [],
-  "solution": "",
+  "proof": [
+    "API 编译 c3 → builds/c3/0.6.0+1 ✓",
+    "假车（虚拟串口）配网：收到 7 个字段，回 RC:PROV OK ✓",
+    "假车 WebSocket：Studio 点 OTA → 车收到带令牌的 URL，下载 975KB ✓",
+    "截图检查 4 个页面，无报错"
+  ],
+  "solution": "RC Studio（`studio/`，Vite+React+TS，编译结果 `studio/dist` 放进 repo）+ 后端 `lib/jobs.js`（任务队列+日志 `logs/jobs/`）、`lib/ports.js`（arduino-cli board list + serialport 监视器，一个串口同时只给一个任务）、`lib/builds.js`（`builds/<型号>/<版本>+<n>/` + sha256）、`lib/firmware.js`（编译/刷机/配网/读信息）。命令行同一套：`node tools/rc.js setup c3 --car 2`。",
   "path": [
     {
-      "step": "固件改 NVS 配网",
-      "status": "todo"
+      "step": "JobRunner / PortManager / BuildRegistry",
+      "status": "done"
     },
     {
-      "step": "多 target / pins.h（ESP32 + C3）",
-      "status": "todo"
+      "step": "一键装车：编译→刷机→配网",
+      "status": "done"
     },
     {
-      "step": "OTA 回退",
-      "status": "todo"
+      "step": "串口监视器 + 发送",
+      "status": "done"
     },
     {
-      "step": "后端 JobRunner + PortManager（serialport）",
-      "status": "todo"
+      "step": "Studio 设备/固件/设置页",
+      "status": "done"
     },
     {
-      "step": "Studio 设备面板",
-      "status": "todo"
+      "step": "flash.sh / reflash.sh 改成调用 tools/rc.js",
+      "status": "done"
     },
     {
-      "step": "flash.sh 改成薄 CLI",
+      "step": "Mac 上真机测试（红车 USB）",
       "status": "todo"
     }
   ],
   "issues": [],
   "data": [],
-  "files": [],
-  "log": []
+  "files": [
+    "admin.js",
+    "lib/jobs.js",
+    "lib/ports.js",
+    "lib/builds.js",
+    "lib/firmware.js",
+    "tools/rc.js",
+    "studio/src/pages/Devices.tsx",
+    "studio/src/pages/Firmware.tsx",
+    "studio/src/pages/Settings.tsx"
+  ],
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "Phase 1 完成，等 Mac 上插红车真机测试。"
+    }
+  ]
 }

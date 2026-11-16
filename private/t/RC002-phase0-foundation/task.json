@@ -1,41 +1,78 @@
 {
   "id": "RC002",
   "title": "Phase 0 地基：git、server 拆分、安全修复",
-  "status": "open",
+  "status": "done",
   "created": "2026-11-16",
   "summary": "公开前必须修的 3 个问题 + 后面全靠它。",
   "problem": "① flash.sh 把 WiFi 密码 sed 进源码，/fw/car.bin 无认证可下载 → 密码泄露；② /ui WebSocket 任何人能发 ota/cfg/selftest/calib；③ FQBN 写死 esp32，只支持一种板。",
-  "idea": "",
-  "proof": [],
-  "solution": "",
+  "idea": "驾驶端（:8080/:8443）只留开车消息；管理功能要 **本机** 或 `?admin=TOKEN`；Studio 单独绑 `127.0.0.1:8090`。",
+  "proof": [
+    "c3 编译 963KB（48%），esp32 编译 982KB",
+    "测试：非本机 /ui 发 calib_clear → 被拒；带 token → 通过",
+    "测试：外网 /fw/car.bin → 403；OTA 令牌下载 200 + x-MD5",
+    "测试：Studio Host: evil.com / Origin: evil.com → 403"
+  ],
+  "solution": "① 固件 0.6：WiFi/服务器/车号/OTA 密码存 **NVS**，USB 串口配网（`{\"t\":\"prov\",...}` → `RC:PROV OK`），bin 里没有密码；② `/fw/car.bin` 要一次性令牌（2 分钟）+ `x-MD5`；③ ota/cfg/selftest/calib 需要管理权限（本机或管理链接）；④ `targets.json` 两个型号（esp32 / c3），分区 `min_spiffs`（程序区 1.9MB，原来 1.25MB 已用 95%）；⑤ OTA 新固件连续 3 次开机连不上服务器 → 自动退回旧版。",
   "path": [
     {
       "step": "git init + 首次提交",
       "status": "done"
     },
     {
-      "step": "server.js 拆成 core/public/admin（行为不变）",
-      "status": "todo"
+      "step": "admin 只绑 127.0.0.1 + Origin/Host 校验（admin.js）",
+      "status": "done"
     },
     {
-      "step": "admin 只绑 127.0.0.1 + Origin/Host 校验",
-      "status": "todo"
+      "step": "ota/cfg/selftest/calib 加权限 + 管理链接",
+      "status": "done"
     },
     {
-      "step": "ota/cfg/selftest/calib 加权限",
-      "status": "todo"
+      "step": "固件 NVS 配网，bin 去掉密码",
+      "status": "done"
     },
     {
-      "step": "Studio 空壳",
+      "step": "OTA 一次性令牌 + MD5 + 回滚",
+      "status": "done"
+    },
+    {
+      "step": "server.js 拆 core/public（行为不变）",
       "status": "todo"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "text": "**第一次升到 0.6 必须插 USB**（分区表 + NVS 配网）。旧 0.5 车的无线升级会被服务器拒绝。",
+      "severity": "high",
+      "open": true
+    },
+    {
+      "text": "驾驶参数（cfg）也要管理权限：以后付费用户要「个人手感」要另做（只存在客户端或每人一份）。",
+      "severity": "med",
+      "open": true
+    },
+    {
+      "text": "pit_display 还是把 WiFi 编进固件（只 USB 烧，不放服务器），以后也改 NVS。",
+      "severity": "low",
+      "open": true
+    }
+  ],
   "data": [],
   "files": [
     "server.js",
+    "admin.js",
+    "lib/secrets.js",
+    "rc_car.ino",
+    "targets.json",
+    "ui.html",
     "flash.sh",
-    "rc_car.ino"
+    "reflash.sh",
+    "flash_pit.sh",
+    "start.sh"
   ],
-  "log": []
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "Phase 0 完成：NVS 配网、管理权限、OTA 令牌/MD5/回滚、min_spiffs 分区。"
+    }
+  ]
 }

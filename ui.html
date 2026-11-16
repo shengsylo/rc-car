@@ -224,6 +224,9 @@ textarea{font:13px/1.4 ui-monospace,Menlo,monospace;min-height:64px;resize:verti
 body.land #wheel{top:58%}
 #scrim{position:fixed;inset:0;background:#0007;z-index:7}
 body.desk #scrim{display:none}
+  .adminOnly{display:none;color:#ffb224}
+  body.noadmin .adminOnly{display:block}
+  body.noadmin [data-tab="car"] .box{opacity:.45;pointer-events:none}
 </style>
 </head>
 <body>
@@ -410,6 +413,7 @@ body.desk #scrim{display:none}
 
       <!-- 车辆 -->
       <div class="tab" data-tab="car">
+        <p class="note adminOnly">校准、自检、升级、车参数要<b>管理权限</b>：在 Mac 上打开，或用服务器终端打印的「管理链接」打开一次。</p>
         <div class="box">
           <h4>陀螺仪水平校准</h4>
           <p class="note">把车放在平地上，别碰它，点「设为水平」。车现在的姿态会被当成水平，陀螺仪的偏差和装歪的角度都会扣掉。</p>
@@ -823,7 +827,10 @@ $('btnRev').onclick = () => { audioUnlock(); demo = { at: performance.now(), pea
 
 // ================= 网络 =================
 function connect(){
-  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ui`);
+  // 管理链接 ?admin=TOKEN：存起来，之后手机打开就有校准/自检/升级权限
+  try { const q = new URLSearchParams(location.search).get('admin'); if (q) { localStorage.setItem('rc.admin', q); history.replaceState(null, '', location.pathname); } } catch {}
+  let adminTok = ''; try { adminTok = localStorage.getItem('rc.admin') || ''; } catch {}
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ui` + (adminTok ? '?admin=' + encodeURIComponent(adminTok) : ''));
   S.ws = ws;
   ws.onopen = () => ws.send(JSON.stringify({t:'hello', name:S.name}));
   ws.onclose = () => setTimeout(connect, 1000);
@@ -831,7 +838,7 @@ function connect(){
 }
 const sendWs = o => { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); };
 const handle = {
-  welcome: m => { S.you = m.you; S.songs = m.songs || []; S.httpsPort = m.httpsPort; renderSongs(); gyro.render(); },
+  welcome: m => { S.admin = !!m.admin; document.body.classList.toggle('noadmin', !S.admin); S.you = m.you; S.songs = m.songs || []; S.httpsPort = m.httpsPort; renderSongs(); gyro.render(); },
   pong: m => { S.rtt1 = Math.round(performance.now() - m.ts); },
   state: m => { S.cars = m.cars; renderCars(); },
   tel: m => { S.tel[m.car] = m; if (m.car === S.car) { S.telCount++; S.lastTelAt = performance.now(); } },
@@ -1012,7 +1019,7 @@ document.addEventListener('visibilitychange', () => { sendWs({t:'bg', hidden: do
 function renderMaint(c){
   if (!c) { $('pFw').textContent = '–'; return; }
   const newer = c.fwAvail && c.fwAvail !== c.fw;
-  $('pFw').textContent = `车上 ${c.fw || '–'}，Mac 上 ${c.fwAvail || '没有（先在 Mac 跑 bash flash.sh --server）'}。陀螺仪芯片 ${c.chip || '没找到'}，I2C ${c.i2c || '空'}` + (c.busy ? `。正在${{ota:'升级',selftest:'自检',calib:'校准'}[c.busy] || c.busy}` : '');
+  $('pFw').textContent = `车上 ${c.fw || '–'}，Mac 上 ${c.fwAvail || '没有（先在 Mac 的 RC Studio 里编译）'}。陀螺仪芯片 ${c.chip || '没找到'}，I2C ${c.i2c || '空'}` + (c.busy ? `。正在${{ota:'升级',selftest:'自检',calib:'校准'}[c.busy] || c.busy}` : '');
   const blocked = !c.online || !!c.busy || (c.driver && c.driver !== S.you);
   $('btnOta').disabled = blocked || !c.fwAvail;
   $('btnOta').textContent = c.fwAvail ? (newer ? `升级到 ${c.fwAvail}` : `重新装 ${c.fwAvail}`) : '升级固件';

@@ -9,9 +9,16 @@ if ! command -v node >/dev/null; then
   echo "▶ 安装 Node.js"; brew install node
 fi
 # ws = 网络，three = 3D 世界（放在 Mac 上，手机不用连外网也能看 3D）
-if [[ ! -d node_modules/ws || ! -f node_modules/three/build/three.module.min.js ]]; then
-  echo "▶ 安装 ws + three（第一次约 1 分钟）"; npm install --no-audit --no-fund --silent
+# serialport = RC Studio 用 USB 配网/看串口
+if [[ ! -d node_modules/ws || ! -f node_modules/three/build/three.module.min.js || ! -d node_modules/serialport ]]; then
+  echo "▶ 安装 ws + three + serialport（第一次约 1 分钟）"; npm install --no-audit --no-fund --silent
 fi
+# RC Studio 网页（studio/dist 已经编译好放在 repo 里；改了 studio/src 才需要重编）
+if [[ ! -f studio/dist/index.html ]]; then
+  echo "▶ 编译 RC Studio"; npm run studio:build --silent
+fi
+command -v arduino-cli >/dev/null || echo "提示：还没装 arduino-cli（RC Studio 编译/刷机要用）：brew install arduino-cli，或先跑一次 bash flash.sh"
+
 
 # 手机浏览器只在 https 网页里给陀螺仪：做一张自己签的证书（只在家里 WiFi 用）
 IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || echo 127.0.0.1)"
@@ -28,5 +35,6 @@ if [[ ! -f certs/cert.pem || "$(cat certs/ip 2>/dev/null)" != "${IP}" ]]; then
   fi
 fi
 
+( sleep 1.5; open "http://127.0.0.1:8090/" 2>/dev/null || true ) &
 echo "提示：macOS 弹出「是否允许 node 接受传入网络连接」时点【允许】，不然手机和车连不进来"
 exec node server.js

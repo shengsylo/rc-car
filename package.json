@@ -1,9 +1,18 @@
 {
   "name": "rc-race-server",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "RC 远程赛车 Mac 服务器",
   "main": "server.js",
-  "scripts": { "start": "node server.js" },
-  "dependencies": { "ws": "^8.18.0", "three": "0.160.0" }
+  "scripts": {
+    "start": "node server.js",
+    "studio:build": "cd studio && npm install --no-audit --no-fund && npm run build",
+    "studio:dev": "cd studio && npm run dev"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "three": "0.160.0",
+    "serialport": "13.0.0",
+    "@serialport/parser-readline": "13.0.0"
+  }
 }

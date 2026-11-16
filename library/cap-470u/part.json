@@ -1,0 +1,31 @@
+{
+ "name": "470µF 16V 电解电容",
+ "kind": "passive",
+ "size": [
+  8,
+  8,
+  12
+ ],
+ "shape": "cyl",
+ "color": "#234",
+ "verified": false,
+ "pins": [
+  {
+   "id": "+",
+   "x": -1.75,
+   "y": 0,
+   "type": "cap_pos",
+   "v": [
+    0,
+    16
+   ]
+  },
+  {
+   "id": "-",
+   "x": 1.75,
+   "y": 0,
+   "type": "gnd"
+  }
+ ],
+ "note": "并在舵机/电机电源，防止 ESP32 掉电重启（BROWNOUT）。"
+}

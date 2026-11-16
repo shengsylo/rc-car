@@ -1,0 +1,45 @@
+{
+ "name": "电池分压（2 个电阻）",
+ "kind": "passive",
+ "size": [
+  6,
+  10,
+  2
+ ],
+ "color": "#7a6",
+ "verified": true,
+ "pins": [
+  {
+   "id": "VBAT",
+   "x": 0,
+   "y": 4,
+   "type": "power_in",
+   "v": [
+    0,
+    12
+   ]
+  },
+  {
+   "id": "OUT",
+   "x": 0,
+   "y": 0,
+   "type": "analog_out",
+   "fw": "BATT",
+   "v": [
+    0,
+    3.3
+   ],
+   "need": [
+    "adc"
+   ]
+  },
+  {
+   "id": "GND",
+   "x": 0,
+   "y": -4,
+   "type": "gnd"
+  }
+ ],
+ "note": "1S：100k/100k（4.35V → 2.2V）；2S：100k/33k。",
+ "shape": "box"
+}

@@ -9,9 +9,6 @@
 set -uo pipefail
 cd "$(dirname "$0")"
 
-FQBN="esp32:esp32:esp32"
-BUILD="$(pwd)/.build"
-TMP="$BUILD/src/rc_car"
 ERASE=0; [[ "${1:-}" == "--erase" ]] && ERASE=1
 
 say(){ printf "\n\033[1;32m▶ %s\033[0m\n" "$*"; }
@@ -19,7 +16,7 @@ warn(){ printf "\033[1;33m! %s\033[0m\n" "$*"; }
 die(){ printf "\n\033[1;31m✗ %s\033[0m\n" "$*"; exit 1; }
 
 command -v arduino-cli >/dev/null || die "还没装工具，先跑一次：bash flash.sh"
-[[ -f .wifi ]] || die "还没设置 WiFi，先跑一次：bash flash.sh"
+command -v node >/dev/null || die "还没装 Node，先跑一次：bash flash.sh"
 
 find_port(){ ls /dev/cu.usbserial* /dev/cu.SLAB_USBtoUART* /dev/cu.wchusbserial* /dev/cu.usbmodem* 2>/dev/null | head -1 || true; }
 usb_seen(){ ioreg -p IOUSB -w0 2>/dev/null | grep -i -E "serial|uart|cp210|ch34|ch910|wch|silicon|jtag" | head -1; }
@@ -54,26 +51,9 @@ echo
 [[ -n "$PORT" ]] || die "60 秒内没找到串口。按上面黄色提示处理后再跑一次"
 say "找到 $PORT"
 
-# ---------- 3. 编译（用 flash.sh 同一份配置） ----------
-WSSID="$(sed -n 1p .wifi)"; WPASS="$(sed -n 2p .wifi)"
-# 服务器 = 这台 Mac：车先用 mDNS 名字找，找不到再用 IP
-SRV_HOST="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
-SRV_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"; CAR_ID="${CAR_ID:-1}"
-mkdir -p "$TMP"
-esc(){ printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g' -e 's/"/\\\\"/g'; }
-sed -e "s|const char\* WIFI_SSID *= *\".*\";|const char* WIFI_SSID   = \"$(esc "$WSSID")\";|" \
-    -e "s|const char\* WIFI_PASS *= *\".*\";|const char* WIFI_PASS   = \"$(esc "$WPASS")\";|" \
-    -e "s|const int  *CAR_ID *= *[0-9]*;|const int   CAR_ID    = ${CAR_ID};|" \
-    -e "s|const char\* SERVER_HOST *= *\".*\";|const char* SERVER_HOST = \"${SRV_HOST}\";|" \
-    -e "s|const char\* SERVER_IP *= *\".*\";|const char* SERVER_IP   = \"${SRV_IP}\";|" \
-    rc_car.ino > "$TMP/rc_car.ino"
-
-# 检查有没有真的填进去
-if grep -qE 'WIFI_SSID *= *"你的WiFi' "$TMP/rc_car.ino"; then echo "✗ WiFi 没填进固件（脚本 bug），把这段贴给 Claude"; exit 1; fi
-printf "\n  WiFi 名称：%s\n  WiFi 密码：%s\n  服务器：  %s.local / %s:8080\n  车号：    %s\n" "$WSSID" "${WPASS:0:1}***${WPASS: -1}（${#WPASS} 位）" "$SRV_HOST" "${SRV_IP:-（没拿到 IP）}" "$CAR_ID"
-say "编译 车 #${CAR_ID}"
-arduino-cli compile --fqbn "$FQBN" --build-path "$BUILD/out" "$TMP" > "$BUILD/compile.log" 2>&1 \
-  || { grep -E "error|Error" "$BUILD/compile.log" | head -15; die "编译失败，把上面的错误贴给 Claude"; }
+# ---------- 3. 编译（tools/rc.js，固件里没有 WiFi 密码） ----------
+TARGET="${TARGET:-esp32}"; CAR_ID="${CAR_ID:-1}"
+node tools/rc.js build "$TARGET" || die "编译失败，把上面的错误贴给 Claude"
 
 # ---------- 4. 擦除（可选） ----------
 if (( ERASE )); then
@@ -86,13 +66,15 @@ if (( ERASE )); then
   fi
 fi
 
-# ---------- 5. 烧录，失败自动重试 3 次 ----------
+# ---------- 5. 烧录（失败自动重试 3 次）→ 写 WiFi ----------
 for try in 1 2 3; do
   say "烧录到 ${PORT}（第 $try 次）"
   (( try > 1 )) && warn "现在按住板上 BOOT 键不放，看到 Writing 再松开"
-  if arduino-cli upload --fqbn "$FQBN:UploadSpeed=115200" -p "$PORT" --input-dir "$BUILD/out" "$TMP"; then
-    say "完成 ✓  下面会打印车的网址（Ctrl+C 退出）"
-    warn "看完网址：拔 USB → 接回 VIN/GND → 接电池"
+  if node tools/rc.js flash "$TARGET" --port "$PORT"; then
+    sleep 2.5
+    node tools/rc.js prov --port "$PORT" --car "$CAR_ID" || warn "配网没成功：等车开机后再跑 bash flash.sh --prov"
+    say "完成 ✓  下面是车的串口输出（Ctrl+C 退出）"
+    warn "看完：拔 USB → 接回 VIN/GND → 接电池"
     sleep 1
     exec arduino-cli monitor -p "$PORT" -c baudrate=115200
   fi

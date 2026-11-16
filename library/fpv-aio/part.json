@@ -1,0 +1,32 @@
+{
+ "name": "5.8G 模拟一体摄像头（TX06 类）",
+ "kind": "video",
+ "size": [
+  14.5,
+  12,
+  14
+ ],
+ "color": "#333",
+ "verified": false,
+ "pins": [
+  {
+   "id": "VCC",
+   "x": -2,
+   "y": -6,
+   "type": "power_in",
+   "v": [
+    2.9,
+    5.5
+   ]
+  },
+  {
+   "id": "GND",
+   "x": 2,
+   "y": -6,
+   "type": "gnd"
+  }
+ ],
+ "drawmA": 300,
+ "note": "1S 直接供电。天线朝上，别贴着电机线。",
+ "shape": "box"
+}

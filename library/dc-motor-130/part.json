@@ -1,0 +1,27 @@
+{
+ "name": "130 有刷电机（红车）",
+ "kind": "motor",
+ "size": [
+  20,
+  25,
+  15
+ ],
+ "shape": "motor",
+ "color": "#aaa",
+ "verified": false,
+ "pins": [
+  {
+   "id": "M+",
+   "x": -3,
+   "y": -12,
+   "type": "motor_in"
+  },
+  {
+   "id": "M-",
+   "x": 3,
+   "y": -12,
+   "type": "motor_in"
+  }
+ ],
+ "stallA": 2
+}

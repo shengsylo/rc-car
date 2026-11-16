@@ -1,0 +1,130 @@
+{
+ "name": "DRV8833 双路电机驱动",
+ "kind": "driver",
+ "driver": 2,
+ "size": [
+  16,
+  18.5,
+  3
+ ],
+ "color": "#5b2a86",
+ "pins": [
+  {
+   "id": "EEP",
+   "x": -7.6,
+   "y": 6.35,
+   "type": "enable",
+   "note": "睡眠脚：高=工作。多数模块板上已上拉"
+  },
+  {
+   "id": "OUT1",
+   "x": -7.6,
+   "y": 3.81,
+   "type": "motor_out",
+   "ch": "A"
+  },
+  {
+   "id": "OUT2",
+   "x": -7.6,
+   "y": 1.27,
+   "type": "motor_out",
+   "ch": "A"
+  },
+  {
+   "id": "OUT3",
+   "x": -7.6,
+   "y": -1.27,
+   "type": "motor_out",
+   "ch": "B"
+  },
+  {
+   "id": "OUT4",
+   "x": -7.6,
+   "y": -3.81,
+   "type": "motor_out",
+   "ch": "B"
+  },
+  {
+   "id": "ULT",
+   "x": -7.6,
+   "y": -6.35,
+   "type": "nc",
+   "note": "故障输出"
+  },
+  {
+   "id": "IN1",
+   "x": 7.6,
+   "y": 6.35,
+   "type": "logic_in",
+   "fw": "IN1",
+   "v": [
+    0,
+    5.5
+   ],
+   "need": [
+    "pwm"
+   ]
+  },
+  {
+   "id": "IN2",
+   "x": 7.6,
+   "y": 3.81,
+   "type": "logic_in",
+   "fw": "IN2",
+   "v": [
+    0,
+    5.5
+   ],
+   "need": [
+    "pwm"
+   ]
+  },
+  {
+   "id": "IN3",
+   "x": 7.6,
+   "y": 1.27,
+   "type": "logic_in",
+   "v": [
+    0,
+    5.5
+   ],
+   "need": [
+    "pwm"
+   ]
+  },
+  {
+   "id": "IN4",
+   "x": 7.6,
+   "y": -1.27,
+   "type": "logic_in",
+   "v": [
+    0,
+    5.5
+   ],
+   "need": [
+    "pwm"
+   ]
+  },
+  {
+   "id": "VCC",
+   "x": 7.6,
+   "y": -3.81,
+   "type": "power_in",
+   "v": [
+    2.7,
+    10.8
+   ],
+   "note": "电机电源，1S 直接接"
+  },
+  {
+   "id": "GND",
+   "x": 7.6,
+   "y": -6.35,
+   "type": "gnd"
+  }
+ ],
+ "verified": false,
+ "maxA": 1.5,
+ "note": "每路持续 1.5A。IN1/IN2 都用 20kHz PWM（固件已改），没有 L298N 的 2V 压降。",
+ "shape": "box"
+}

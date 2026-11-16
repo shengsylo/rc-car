@@ -11,3 +11,8 @@ __pycache__/
 *.pyc
 .DS_Store
 docs/config.js
+
+# RC Studio
+builds/
+projects/*/.history/
+studio/node_modules/

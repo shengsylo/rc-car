@@ -19,7 +19,8 @@ say(){ printf "\n\033[1;32m▶ %s\033[0m\n" "$*"; }
 die(){ printf "\n\033[1;31m✗ %s\033[0m\n" "$*"; exit 1; }
 
 command -v arduino-cli >/dev/null || die "先跑一次 bash flash.sh 装好工具"
-[[ -f .wifi ]] || die "先跑一次 bash flash.sh 设置 WiFi"
+command -v node >/dev/null || die "先跑一次 bash flash.sh"
+[[ -n "$(node -e "const s=require('./lib/secrets').load();process.stdout.write(((s.wifi||{})[s.wifiDefault||'home']||{}).ssid||'')")" ]] || die "先设置 WiFi：bash flash.sh --wifi"
 [[ -f pit_display/pit_display.ino ]] || die "找不到 pit_display/pit_display.ino（要放在 pit_display 文件夹里）"
 
 find_port(){ ls /dev/cu.usbmodem* /dev/cu.usbserial* /dev/cu.wchusbserial* /dev/cu.SLAB_USBtoUART* 2>/dev/null | head -1 || true; }
@@ -34,7 +35,9 @@ for lib in "WebSockets" "Adafruit GFX Library" "Adafruit BusIO" "Adafruit ST7735
   arduino-cli lib list 2>/dev/null | grep -qi "^${lib// /.} " || { say "安装库 $lib"; arduino-cli lib install "$lib" >/dev/null; }
 done
 
-WSSID="$(sed -n 1p .wifi)"; WPASS="$(sed -n 2p .wifi)"
+# WiFi 从 ~/.rcstudio/secrets.json 读（看板是 USB 烧的，bin 不放到服务器上）
+WSSID="$(node -e "const s=require('./lib/secrets').load();process.stdout.write(((s.wifi||{})[s.wifiDefault||'home']||{}).ssid||'')")"
+WPASS="$(node -e "const s=require('./lib/secrets').load();process.stdout.write(((s.wifi||{})[s.wifiDefault||'home']||{}).pass||'')")"
 SRV_HOST="$(scutil --get LocalHostName 2>/dev/null || hostname -s)"
 SRV_IP="$(ipconfig getifaddr en0 2>/dev/null || ipconfig getifaddr en1 2>/dev/null || true)"
 esc(){ printf '%s' "$1" | sed -e 's/[\\&|]/\\&/g' -e 's/"/\\\\"/g'; }

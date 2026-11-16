@@ -1,37 +1,61 @@
 {
   "id": "RC010",
   "title": "Studio：真实接线 + ERC + pins.h（Phase 3）",
-  "status": "open",
+  "status": "active",
   "created": "2026-11-16",
-  "summary": "自己拉线、剪线、看线长；电压/电平/引脚冲突检查；生成固件引脚。",
+  "summary": "真实尺寸接线图：自己拉线、剪线、加拐点；ERC；生成 pins.h。",
   "problem": "",
   "idea": "",
-  "proof": [],
-  "solution": "",
+  "proof": [
+    "保时捷示例 ERC：转向舵机最高 4.2V，LAVA LiHV 满电 4.35V → 报错（真问题）",
+    "生成 pins.h：IN1=3 IN2=4 SERVO=5 BATT=0，和固件默认一致"
+  ],
+  "solution": "俯视 SVG（真实毫米），拖零件 = 改 3D 位置；点针拉线，双击导线加拐点，剪刀工具剪线；网络由导线 union-find 算出；ERC：短路、电压超范围、GPIO 接电源/电机、缺 PWM/ADC/I2C 能力、只能输入的脚、开机脚、3V3 电流预算；剪线单（长度 = 3D 路径 ×1.15 + 6mm）；pins.h 从接线生成写到 `firmware/pins/<型号>.h`，编译自动带上。",
   "path": [
     {
-      "step": "SVG 接线编辑",
-      "status": "todo"
+      "step": "接线编辑器",
+      "status": "done"
     },
     {
-      "step": "ERC 规则",
-      "status": "todo"
+      "step": "ERC",
+      "status": "done"
     },
     {
-      "step": "生成 pins.h",
-      "status": "todo"
+      "step": "pins.h 生成 → 编译",
+      "status": "done"
     },
     {
-      "step": "接线清单取代 wiring.html",
-      "status": "todo"
+      "step": "剪线单",
+      "status": "done"
     },
     {
-      "step": "KiCad 导出（Phase 6）",
+      "step": "导出 KiCad（以后自己做板）",
       "status": "todo"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "text": "舵机 2.8–4.2V，LAVA 是 LiHV（满电 4.35V）：充电器调到 LiPo 4.2V 模式，或给舵机串一个二极管降压。",
+      "severity": "high",
+      "open": true
+    },
+    {
+      "text": "ESP32-C3 5V 脚：电池低于约 3.6V 时 3V3 会掉，固件低电压保护要设在 3.6V 左右。",
+      "severity": "med",
+      "open": true
+    }
+  ],
   "data": [],
-  "files": [],
-  "log": []
+  "files": [
+    "studio/src/project/Wiring.tsx",
+    "studio/src/project/erc.ts",
+    "studio/src/project/Inspector.tsx",
+    "admin.js"
+  ],
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "接线 + ERC + pins.h + 剪线单做好。"
+    }
+  ]
 }
