@@ -7,6 +7,7 @@
   18.2
  ],
  "color": "#222",
+ "model": "servo",
  "pins": [
   {
    "id": "SIG",
@@ -43,6 +44,7 @@
   }
  ],
  "verified": true,
+ "weight": 3.7,
  "stallA": 0.5,
  "note": "2.8–4.2V，1S 直接供电。堵转电流大，舵机线要短、电源加 470µF。",
  "shape": "box"

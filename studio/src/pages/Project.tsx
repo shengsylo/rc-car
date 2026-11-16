@@ -11,6 +11,7 @@ export function Project() {
   const projects = useStore(s => s.st!.projects);
   const { id, doc, tool, gizmo, dirty, past, future, set } = useP();
   const [shell, setShell] = useState(true);
+  const [dims, setDims] = useState(false);
   const [split, setSplit] = useState<'both' | '3d' | '2d'>('both');
   useEffect(() => {
     if (id) return;
@@ -26,6 +27,7 @@ export function Project() {
       else if ((e.metaKey || e.ctrlKey) && k === 's') { e.preventDefault(); save(); }
       else if (k === 'delete' || k === 'backspace') removeSel();
       else if (k === 'escape') set({ tool: 'select', pending: null, sel: null });
+      else if (k === 'f') set({ focus: useP.getState().focus + 1 });
       else if (k === 'w') set({ gizmo: 'translate' });
       else if (k === 'e') set({ gizmo: 'rotate' });
       else if (k === 'l') set({ tool: 'wire' });
@@ -61,12 +63,13 @@ export function Project() {
         <span className="sep" />
         <div className="seg">{([['both', '3D + 接线'], ['3d', '3D'], ['2d', '接线']] as const).map(([v, l]) => <button key={v} className={split === v ? 'on' : ''} onClick={() => setSplit(v)}>{l}</button>)}</div>
         <label className="check small"><input type="checkbox" checked={shell} onChange={e => setShell(e.target.checked)} />车壳</label>
+        <label className="check small"><input type="checkbox" checked={dims} onChange={e => setDims(e.target.checked)} />全部尺寸</label>
         <span className="grow" />
         <span className={'mono small ' + (dirty ? 'dim' : 'okc')}>{dirty ? '未保存…' : '已保存'}</span>
       </div>
       {doc ? <div className="pbody">
         <div className={'views ' + split}>
-          {split !== '2d' && <div className="pane"><div className="pane-t">3D 布局</div><View3D showShell={shell} /></div>}
+          {split !== '2d' && <div className="pane"><div className="pane-t">3D 布局</div><View3D showShell={shell} showDims={dims} /></div>}
           {split !== '3d' && <div className="pane"><div className="pane-t">接线图（俯视 · 真实尺寸）</div><Wiring /></div>}
         </div>
         <Inspector />

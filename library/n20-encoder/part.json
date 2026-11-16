@@ -7,6 +7,7 @@
   10
  ],
  "shape": "motor",
+ "model": "n20",
  "color": "#c0c0c0",
  "pins": [
   {
@@ -65,6 +66,12 @@
   }
  ],
  "verified": false,
+ "weight": 10,
+ "shaft": {
+  "d": 3,
+  "len": 10,
+  "flat": 2.5
+ },
  "stallA": 0.6,
  "note": "轴 3mm D 型，在 +y 方向。线色：红 M+ 白 M− 黑 编码器 VCC 蓝 GND 绿 A 黄 B。"
 }

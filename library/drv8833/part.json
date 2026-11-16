@@ -5,9 +5,11 @@
  "size": [
   16,
   18.5,
-  3
+  2.6
  ],
  "color": "#5b2a86",
+ "model": "drv8833",
+ "pinZ": 1.2,
  "pins": [
   {
    "id": "EEP",
@@ -80,9 +82,26 @@
    ]
   },
   {
-   "id": "IN3",
+   "id": "VCC",
    "x": 7.6,
    "y": 1.27,
+   "type": "power_in",
+   "v": [
+    2.7,
+    10.8
+   ],
+   "note": "电机电源，1S 直接接"
+  },
+  {
+   "id": "GND",
+   "x": 7.6,
+   "y": -1.27,
+   "type": "gnd"
+  },
+  {
+   "id": "IN3",
+   "x": 7.6,
+   "y": -3.81,
    "type": "logic_in",
    "v": [
     0,
@@ -95,7 +114,7 @@
   {
    "id": "IN4",
    "x": 7.6,
-   "y": -1.27,
+   "y": -6.35,
    "type": "logic_in",
    "v": [
     0,
@@ -104,26 +123,11 @@
    "need": [
     "pwm"
    ]
-  },
-  {
-   "id": "VCC",
-   "x": 7.6,
-   "y": -3.81,
-   "type": "power_in",
-   "v": [
-    2.7,
-    10.8
-   ],
-   "note": "电机电源，1S 直接接"
-  },
-  {
-   "id": "GND",
-   "x": 7.6,
-   "y": -6.35,
-   "type": "gnd"
   }
  ],
  "verified": false,
+ "weight": 1.2,
+ "source": "https://components101.com/node/2317",
  "maxA": 1.5,
  "note": "每路持续 1.5A。IN1/IN2 都用 20kHz PWM（固件已改），没有 L298N 的 2V 压降。",
  "shape": "box"

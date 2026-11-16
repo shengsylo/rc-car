@@ -10,7 +10,9 @@ export function partMatrix(p: Part): THREE.Matrix4 {
 // 针脚在零件顶面（局部 z = 高/2）
 export function pinLocal(lib: LibPart, pinId: string): THREE.Vector3 | null {
   const pin = lib.pins.find(x => x.id === pinId); if (!pin) return null;
-  return new THREE.Vector3(pin.x, pin.y, lib.size[2] / 2);
+  // 针脚高度：pin.z（从底部量）> lib.pinZ > 顶面
+  const z = (pin as any).z != null ? -lib.size[2] / 2 + (pin as any).z : (lib as any).pinZ != null ? -lib.size[2] / 2 + (lib as any).pinZ : lib.size[2] / 2;
+  return new THREE.Vector3(pin.x, pin.y, z);
 }
 export function pinWorld(doc: Doc, lib: Lib, partId: string, pinId: string): Vec3 | null {
   const p = doc.parts.find(x => x.id === partId); if (!p) return null;

@@ -1,18 +1,21 @@
 {
- "name": "BetaFPV LAVA 1S 580mAh（BT2.0）",
+ "name": "BetaFPV LAVA II 1S 580mAh（BT2.0）",
  "kind": "battery",
  "size": [
-  13,
-  58,
-  10
+  15,
+  70,
+  6.5
  ],
  "color": "#e8a500",
- "verified": false,
+ "model": "lipo",
+ "verified": true,
+ "weight": 14.1,
+ "source": "https://betafpv.com/products/lava-ii-1s-battery",
  "pins": [
   {
    "id": "B+",
-   "x": -2,
-   "y": -29,
+   "x": -2.5,
+   "y": -35,
    "type": "power_src",
    "v": [
     3.3,
@@ -21,12 +24,12 @@
   },
   {
    "id": "B-",
-   "x": 2,
-   "y": -29,
+   "x": 2.5,
+   "y": -35,
    "type": "gnd"
   }
  ],
  "maxA": 50,
- "note": "LiHV 满电 4.35V。尺寸是估计，到货量。",
+ "note": "官方 70 × 15 × 6.5mm，14.1g。LiHV 满电 4.35V。",
  "shape": "box"
 }

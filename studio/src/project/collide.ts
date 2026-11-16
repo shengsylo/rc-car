@@ -22,5 +22,11 @@ export function collisions(doc: Doc, lib: Lib): Issue[] {
       if (kb.intersectsBox(b)) I.push({ level: 'warn', text: `${p.label} 挡到「${ko.name}」`, parts: [p.id] });
     }
   }
+  // 天线：竖直的铜管天线有多高
+  for (const p of doc.parts) {
+    const l = lib[p.lib] as any; if (!l?.antenna) continue;
+    const top = partBox(p, l).max.z + l.antenna.len;
+    if (top > e.size[2]) I.push({ level: 'warn', text: `${p.label} 的天线竖起来顶到 ${Math.round(top)}mm，车壳只有 ${e.size[2]}mm 高 → 要折弯/平放（会影响图传距离）`, parts: [p.id] });
+  }
   return I;
 }

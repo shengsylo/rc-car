@@ -119,6 +119,18 @@ export function Wiring() {
               </g>);
           });
         })}
+        {/* 选中零件的尺寸 */}
+        {sel?.kind === 'part' && (() => { const p = doc.parts.find(x => x.id === sel.id); const l = p && lib[p.lib]; if (!p || !l) return null;
+          const rz = ((p.pose.r[2] % 180) + 180) % 180; const sw = rz === 90 ? l.size[1] : l.size[0], sd = rz === 90 ? l.size[0] : l.size[1];
+          const x0 = X(p.pose.p[0] - sw / 2), x1 = X(p.pose.p[0] + sw / 2), y0 = Y(p.pose.p[1] + sd / 2), y1 = Y(p.pose.p[1] - sd / 2);
+          const f = (v: number) => `${+v.toFixed(1)}mm · ${+(v / 10).toFixed(2)}cm`;
+          return <g className="dim2d">
+            <line x1={x0} x2={x1} y1={y1 + 12} y2={y1 + 12} /><line x1={x0} x2={x0} y1={y1 + 6} y2={y1 + 18} /><line x1={x1} x2={x1} y1={y1 + 6} y2={y1 + 18} />
+            <text x={(x0 + x1) / 2} y={y1 + 26} textAnchor="middle">{f(sw)}</text>
+            <line x1={x1 + 12} x2={x1 + 12} y1={y0} y2={y1} /><line x1={x1 + 6} x2={x1 + 18} y1={y0} y2={y0} /><line x1={x1 + 6} x2={x1 + 18} y1={y1} y2={y1} />
+            <text x={x1 + 22} y={(y0 + y1) / 2} dominantBaseline="middle">{f(sd)}</text>
+            <text x={(x0 + x1) / 2} y={y0 - 8} textAnchor="middle" className="hz">高 {f(l.size[2])} · 离地 {+(p.pose.p[2] - l.size[2] / 2).toFixed(1)}mm</text>
+          </g>; })()}
         {pending && mouse && (() => { const a = pinWorld(doc, lib, pending.part, pending.pin); return a && <line x1={X(a[0])} y1={Y(a[1])} x2={X(mouse[0])} y2={Y(mouse[1])} className="pendline" />; })()}
       </svg>
       <div className="wbar mono dim small">{mouse ? `x ${mouse[0].toFixed(1)}  y ${mouse[1].toFixed(1)} mm` : ''} · 滚轮缩放 · 拖空白平移 · 拖零件移动（Alt 精细） · 双击导线加拐点</div>

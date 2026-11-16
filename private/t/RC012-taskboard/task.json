@@ -28,6 +28,14 @@
     {
       "step": "发布登录壳（可选）",
       "status": "todo"
+    },
+    {
+      "step": "GitHub Pages：任务板 + Studio 演示版",
+      "status": "done"
+    },
+    {
+      "step": "Mac 上第一次跑 publish.sh",
+      "status": "todo"
     }
   ],
   "issues": [],
@@ -36,7 +44,15 @@
     "tools/tracker.py",
     "tools/sb.py",
     "supabase/schema.sql",
-    ".claude/settings.json"
+    ".claude/settings.json",
+    "tools/publish.sh",
+    "tools/build_site.js",
+    "studio/src/api.ts"
   ],
-  "log": []
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "加 GitHub Pages：`sh tools/publish.sh`（Mac 上跑）→ 公开 repo `shengsylo/rc-car-route`，根目录任务板登录壳，`/studio/` 是 RC Studio 网页演示版（项目/零件库只读数据，改动存浏览器）。私有 repo 不公开。"
+    }
+  ]
 }

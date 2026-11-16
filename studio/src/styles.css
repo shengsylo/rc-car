@@ -167,3 +167,13 @@ h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .12em; color: v
   .views { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
 }
 .card.warn, .card.empty-card { display: block; }
+.dimsbox { display: grid; gap: 4px; background: #7fd3ff0d; border: 1px solid #7fd3ff2a; border-radius: 8px; padding: 8px 10px; }
+.dimsbox div { display: grid; grid-template-columns: 22px 1fr auto; gap: 8px; align-items: baseline; font-size: 13px; }
+.dimsbox span { color: var(--dim); } .dimsbox i { color: #7fd3ff; font-style: normal; font-size: 12px; font-family: var(--mono); }
+.dimsbox a { color: #7fd3ff; }
+.pill.demo { background: #7fd3ff22; color: #7fd3ff; }
+.views > .pane { min-width: 0; overflow: hidden; }
+.v3d { position: relative; overflow: hidden; } .v3d canvas { position: absolute; inset: 0; }
+.dim2d line { stroke: #7fd3ff; stroke-width: 1; pointer-events: none; }
+.dim2d text { fill: #cdeeff; font: 600 11px var(--mono); pointer-events: none; paint-order: stroke; stroke: #000; stroke-width: 3px; }
+.dim2d text.hz { fill: #9bb; font-weight: 500; }

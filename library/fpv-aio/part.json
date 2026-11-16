@@ -1,13 +1,20 @@
 {
- "name": "5.8G 模拟一体摄像头（TX06 类）",
+ "name": "Eachine TX06 5.8G 一体摄像头",
  "kind": "video",
  "size": [
-  14.5,
-  12,
-  14
+  14,
+  13.8,
+  12
  ],
  "color": "#333",
+ "model": "tx06",
  "verified": false,
+ "weight": 2.8,
+ "source": "https://www.fpvfaster.com.au/products/eachine-tx06-700tvl-aio-5-8ghz-vtx-fpv-analog-camera",
+ "antenna": {
+  "len": 35,
+  "d": 4.2
+ },
  "pins": [
   {
    "id": "VCC",
@@ -27,6 +34,6 @@
   }
  ],
  "drawmA": 300,
- "note": "1S 直接供电。天线朝上，别贴着电机线。",
+ "note": "官方 14 × 13.8mm、2.8g，3.3–5.5V 约 280mA；铜天线 35mm × Ø4.2 另算（高度未量）。天线朝上，别贴着电机线。",
  "shape": "box"
 }

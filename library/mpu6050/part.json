@@ -4,9 +4,11 @@
  "size": [
   21,
   16,
-  3
+  3.2
  ],
  "color": "#1d3f8f",
+ "model": "mpu6050",
+ "pinZ": 1.6,
  "pins": [
   {
    "id": "VCC",
@@ -79,5 +81,7 @@
  ],
  "verified": true,
  "drawmA": 4,
+ "weight": 2,
+ "source": "https://protosupplies.com/product/mpu-6050-gy-521-3-axis-accel-gryo-sensor-module/",
  "shape": "box"
 }

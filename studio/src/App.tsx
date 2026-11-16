@@ -4,6 +4,7 @@ import { Devices } from './pages/Devices';
 import { Firmware } from './pages/Firmware';
 import { Settings } from './pages/Settings';
 import { Project } from './pages/Project';
+import { DEMO, act } from './api';
 
 const TABS = [
   { id: 'devices', label: '设备', sub: '车 · USB · 刷机' },
@@ -14,7 +15,7 @@ const TABS = [
 type Tab = typeof TABS[number]['id'];
 
 export function App() {
-  const [tab, setTab] = useState<Tab>(() => (location.hash.slice(1) as Tab) || 'devices');
+  const [tab, setTab] = useState<Tab>(() => (location.hash.slice(1) as Tab) || (DEMO ? 'project' : 'devices'));
   useEffect(() => { location.hash = tab; }, [tab]);
   useEffect(() => { const f = () => { const h = location.hash.slice(1) as Tab; if (TABS.some(t => t.id === h)) setTab(h); }; addEventListener('hashchange', f); return () => removeEventListener('hashchange', f); }, []);
   const { connected, st, toast } = useStore();
@@ -30,7 +31,8 @@ export function App() {
           </button>
         ))}
         <div className="side-foot">
-          <div className={'pill ' + (connected ? 'ok' : 'bad')}>{connected ? '服务器在线' : '连不上服务器'}</div>
+          {DEMO ? <><div className="pill demo">网页演示版</div><div className="dim">改动只存在这个浏览器。编译/刷机要在 Mac 上开。</div><button className="ghost xs" onClick={async () => { if (confirm('清掉这个浏览器里的改动，回到原始项目？')) { await act('demoReset'); location.reload(); } }}>重置演示</button></> :
+          <div className={'pill ' + (connected ? 'ok' : 'bad')}>{connected ? '服务器在线' : '连不上服务器'}</div>}
           <div className="mono dim">车在线 {online} · 任务 {running}</div>
           <div className="mono dim">固件源码 {st?.version ?? '–'}</div>
         </div>

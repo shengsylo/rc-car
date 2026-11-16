@@ -9,12 +9,12 @@ type PS = {
   tool: Tool; gizmo: 'translate' | 'rotate'; dirty: boolean; past: string[]; future: string[];
   pending: End | null;                     // 拉线时第一个针
   hoverPart: string | null; highlight: string[];
-  t: number; playing: boolean; live: { steer: number; throttle: number } | null;
+  t: number; playing: boolean; live: { steer: number; throttle: number } | null; focus: number;
   set: (p: Partial<PS>) => void;
 };
 export const useP = create<PS>(set => ({
   id: null, doc: null, lib: {}, sel: null, tool: 'select', gizmo: 'translate', dirty: false, past: [], future: [], pending: null,
-  hoverPart: null, highlight: [], t: 0, playing: false, live: null, set: p => set(p),
+  hoverPart: null, highlight: [], t: 0, playing: false, live: null, focus: 0, set: p => set(p),
 }));
 
 // 改文档：记一步撤销

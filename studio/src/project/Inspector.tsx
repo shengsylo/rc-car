@@ -36,7 +36,7 @@ function Num({ v, on, step = 0.5 }: { v: number; on: (n: number) => void; step?:
 }
 function Selected() {
   const { doc, lib, sel } = useP();
-  if (!doc || !sel) return <div className="dim small">在 3D 或接线图里点一个零件/导线。<br /><br />快捷键：<b>W</b> 移动 · <b>E</b> 旋转 · <b>R</b> 转 90° · <b>Del</b> 删除 · <b>⌘Z</b> 撤销 · <b>L</b> 拉线 · <b>X</b> 剪刀 · <b>Esc</b> 取消</div>;
+  if (!doc || !sel) return <div className="dim small">在 3D 或接线图里点一个零件/导线。<br /><br />快捷键：<b>F</b> 镜头对准 · <b>W</b> 移动 · <b>E</b> 旋转 · <b>R</b> 转 90° · <b>Del</b> 删除 · <b>⌘Z</b> 撤销 · <b>L</b> 拉线 · <b>X</b> 剪刀 · <b>Esc</b> 取消</div>;
   if (sel.kind === 'wire') {
     const w = doc.wires.find(x => x.id === sel.id); if (!w) return null;
     const pa = doc.parts.find(p => p.id === w.a.part), pb = doc.parts.find(p => p.id === w.b.part);
@@ -61,7 +61,13 @@ function Selected() {
     {l?.note && <div className="note small">{l.note}</div>}
     <div className="grid3"><span>位置 mm</span>{[0, 1, 2].map(i => <Num key={i} v={p.pose.p[i]} on={v => setP(i, v)} />)}</div>
     <div className="grid3"><span>旋转 °</span>{[0, 1, 2].map(i => <Num key={i} v={p.pose.r[i]} step={15} on={v => setR(i, v)} />)}</div>
-    {l && <div className="dim small mono">尺寸 {l.size.join(' × ')} mm</div>}
+    {l && <div className="dimsbox">
+      <div><span>宽</span><b className="mono">{l.size[0]} mm</b><i>{(l.size[0] / 10).toFixed(2)} cm</i></div>
+      <div><span>长</span><b className="mono">{l.size[1]} mm</b><i>{(l.size[1] / 10).toFixed(2)} cm</i></div>
+      <div><span>高</span><b className="mono">{l.size[2]} mm</b><i>{(l.size[2] / 10).toFixed(2)} cm</i></div>
+      {l.weight != null && <div><span>重</span><b className="mono">{l.weight} g</b><i>{l.verified ? '官方数据' : '估计'}</i></div>}
+      {l.source && <a className="small" href={l.source} target="_blank" rel="noreferrer">尺寸来源 ↗</a>}
+    </div>}
     {l && l.pins.length > 0 && <table className="tbl small"><thead><tr><th>脚</th><th>类型</th><th>接到</th></tr></thead><tbody>
       {l.pins.map(pin => { const n = N.find(x => x.id === netOf.get(`${p.id}.${pin.id}`)); return <tr key={pin.id} title={pin.strap || pin.note || ''}>
         <td className="mono">{pin.id}{pin.strap ? ' ⚠' : ''}</td><td className="dim">{pin.type}{pin.fw ? ` · ${pin.fw}` : ''}</td>

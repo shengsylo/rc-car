@@ -7,6 +7,7 @@
   15
  ],
  "shape": "motor",
+ "model": "m130",
  "color": "#aaa",
  "verified": false,
  "pins": [

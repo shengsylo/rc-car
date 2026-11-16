@@ -6,7 +6,11 @@
   "summary": "3D 布局 + 动画，和接线图同一份数据。",
   "problem": "",
   "idea": "",
-  "proof": [],
+  "proof": [
+    "LAVA II 580mAh 官方 70 × 15 × 6.5mm 14.1g（原来估的 58×13×10 错了）",
+    "TX06 官方 14 × 13.8mm 2.8g，天线 35mm × Ø4.2",
+    "C3 SuperMini 22.52 × 18mm"
+  ],
   "solution": "`projects/<id>/project.json`：零件 3D 位置是唯一真相；three.js 场景（Z 朝上），拖动/旋转（W/E，0.5mm、15° 吸附），车壳+禁区，穿模/超出车壳检查；动画时间轴（油门、转向两条曲线）驱动轮子转动和前轮转向。零件库 `library/`（17 个，`tools/gen_library.py` 生成）。",
   "path": [
     {
@@ -36,9 +40,24 @@
     {
       "step": "动画跟真车数据同步（live）",
       "status": "todo"
+    },
+    {
+      "step": "真实零件 3D 模型 + 尺寸标注",
+      "status": "done"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "text": "TX06 天线竖起来顶到约 62mm，保时捷车壳估计只有 40mm 高：天线要折弯/平放。",
+      "severity": "med",
+      "open": true
+    },
+    {
+      "text": "LAVA 580 有 70mm 长，占车身一半：保时捷底盘要按这个长度留位。",
+      "severity": "med",
+      "open": true
+    }
+  ],
   "data": [],
   "files": [
     "studio/src/project/View3D.tsx",
@@ -49,12 +68,17 @@
     "projects/",
     "tools/gen_library.py",
     "tools/gen_projects.py",
-    "lib/projects.js"
+    "lib/projects.js",
+    "studio/src/project/models.ts"
   ],
   "log": [
     {
       "at": "2026-11-16",
       "text": "3D 布局 + 动画做好；保时捷和红车两个示例项目。"
+    },
+    {
+      "at": "2026-11-16",
+      "text": "3D 改成真实零件模型（`studio/src/project/models.ts`）：PCB 板厚+丝印脚名、排针、芯片字、USB-C、按键、LED、电容、端子、散热片、N20 齿轮箱+D 轴+6 色线、舵机耳朵+舵臂、LAVA 标签+BT2.0、TX06 镜头+35mm 天线、轮胎胎纹+轮毂。选中显示 mm/cm 尺寸（3D 和 2D），F 键对准。"
     }
   ]
 }
