@@ -1,0 +1,35 @@
+{
+  "id": "T005",
+  "title": "红车（较大，2S）升级",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "现有 ESP32 + L298N 红车：换驱动、加 FPV、可能换 ELRS。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "决定控制：ESP32 WiFi 或 ELRS（T007）",
+      "status": "todo"
+    },
+    {
+      "step": "装 FPV 摄像头（5V 供电）",
+      "status": "todo"
+    },
+    {
+      "step": "低速顺滑：降齿轮比 + 软件油门曲线；最好换有感无刷",
+      "status": "todo"
+    }
+  ],
+  "issues": [
+    {
+      "text": "第一块 L298N 因 VIN/GND 接反烧坏，需防反接",
+      "severity": "med",
+      "open": true
+    }
+  ],
+  "data": [],
+  "files": [],
+  "log": []
+}

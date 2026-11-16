@@ -1,0 +1,13 @@
+.env
+.wifi
+certs/
+node_modules/
+firmware/*.bin
+.build/
+logs/
+events.jsonl
+calib.json
+__pycache__/
+*.pyc
+.DS_Store
+docs/config.js

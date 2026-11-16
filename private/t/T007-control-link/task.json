@@ -1,0 +1,38 @@
+{
+  "id": "T007",
+  "title": "控制链路：ESP32 WiFi vs ELRS",
+  "status": "blocked",
+  "created": "2026-11-16",
+  "summary": "等 owner 决定每台车用哪种。",
+  "problem": "",
+  "idea": "ELRS：电脑 → ESP32(USB) → ELRS TX 模块(CRSF 400K) → 车上 ELRS PWM 接收器，延迟约 2–5ms。保时捷 1S：普通 ELRS 接收器要 4.5–5V 起，需 5V 升压或 1S 融合接收器（MinimumRC RX-ELRS 5CH 内置有刷电调，规格未确认）。红车 2S 直接可用。",
+  "proof": [],
+  "solution": "",
+  "path": [],
+  "issues": [
+    {
+      "text": "ELRS 车上没有 IMU/编码器数据，要另加 ESP32 回传",
+      "severity": "med",
+      "open": true
+    }
+  ],
+  "data": [
+    {
+      "k": "BetaFPV ELRS Micro RX",
+      "v": "5–9V，4.5g，US$12.99",
+      "note": ""
+    },
+    {
+      "k": "RadioMaster ER3C-i",
+      "v": "4.5–8.4V，4.2g，US$18.99",
+      "note": ""
+    },
+    {
+      "k": "BetaFPV ELRS Nano TX",
+      "v": "5–12V，US$29.99–39.99",
+      "note": "一个 TX 只控一台车"
+    }
+  ],
+  "files": [],
+  "log": []
+}

@@ -1,0 +1,41 @@
+{
+  "id": "T002",
+  "title": "Phase 0 地基：git、server 拆分、安全修复",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "公开前必须修的 3 个问题 + 后面全靠它。",
+  "problem": "① flash.sh 把 WiFi 密码 sed 进源码，/fw/car.bin 无认证可下载 → 密码泄露；② /ui WebSocket 任何人能发 ota/cfg/selftest/calib；③ FQBN 写死 esp32，只支持一种板。",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "git init + 首次提交",
+      "status": "done"
+    },
+    {
+      "step": "server.js 拆成 core/public/admin（行为不变）",
+      "status": "todo"
+    },
+    {
+      "step": "admin 只绑 127.0.0.1 + Origin/Host 校验",
+      "status": "todo"
+    },
+    {
+      "step": "ota/cfg/selftest/calib 加权限",
+      "status": "todo"
+    },
+    {
+      "step": "Studio 空壳",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [
+    "server.js",
+    "flash.sh",
+    "rc_car.ino"
+  ],
+  "log": []
+}

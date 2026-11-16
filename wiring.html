@@ -1,0 +1,337 @@
+<title>RC 车接线图</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Noto+Sans+SC:wght@400;600;700&display=swap">
+<style>
+/* 布局：上面是可点的原理图，下面是逐根接线清单；点一行，图里只亮那一根线 */
+:root{
+  --bg:#f3f5f4; --panel:#ffffff; --ink:#18201d; --dim:#64706b; --line:#cfd6d3;
+  --board:#e7ecea; --pcb:#2f6b4f; --pcbink:#ffffff;
+  --pwr:#d6362b; --gnd:#2a2f2d; --v5:#e08a12; --sig:#2c6fd6; --mot:#8a4fd1;
+  --hi:#ffd43b;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --sans:"Noto Sans SC",-apple-system,"PingFang SC",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111614; --panel:#18201d; --ink:#e6ece9; --dim:#94a19b; --line:#2c3632;
+  --board:#1f2925; --pcb:#2b6249; --gnd:#c9d1cd; --pwr:#ff5a4e; --sig:#5b9bff; --mot:#b083ff; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111614; --panel:#18201d; --ink:#e6ece9; --dim:#94a19b; --line:#2c3632;
+  --board:#1f2925; --pcb:#2b6249; --gnd:#c9d1cd; --pwr:#ff5a4e; --sig:#5b9bff; --mot:#b083ff; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55}
+.wrap{max-width:1080px;margin:0 auto;padding-block:28px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:24px}
+h1{font-size:1.6rem;margin:0;text-wrap:balance}
+.sub{color:var(--dim);margin:4px 0 0;max-width:65ch}
+.warn{display:grid;gap:8px;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--pwr);border-radius:6px;padding:14px 16px}
+.warn b{color:var(--pwr)}
+.warn p{margin:0}
+.fig{background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow-x:auto}
+svg{display:block;min-width:980px;width:100%;height:auto}
+svg text{font-family:var(--mono);fill:var(--ink)}
+.box{fill:var(--board);stroke:var(--line);stroke-width:1.5}
+.pcb{fill:var(--pcb)}
+.pcbt{fill:var(--pcbink)!important;font-weight:600}
+.pin{fill:var(--panel);stroke:var(--ink);stroke-width:1.5}
+.wire{fill:none;stroke-width:4;stroke-linecap:round;stroke-linejoin:round;transition:opacity .15s}
+.dimmed .wire{opacity:.12}
+.dimmed .wire.on{opacity:1;stroke-width:6}
+.lbl{font-size:12px}.lbl.dim{fill:var(--dim)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:.85rem;color:var(--dim)}
+.legend i{display:inline-block;width:22px;height:4px;border-radius:2px;vertical-align:middle;margin-right:6px}
+h2{font-size:1.1rem;margin:0}
+.list{display:grid;gap:18px}
+.grp{display:grid;gap:6px}
+.grp h3{font-size:.8rem;letter-spacing:.08em;color:var(--dim);margin:0;font-weight:600}
+button.row{all:unset;cursor:pointer;display:grid;grid-template-columns:14px minmax(0,1fr) auto minmax(0,1fr);gap:12px;align-items:center;padding:10px 14px;background:var(--panel);border:1px solid var(--line);border-radius:6px;font-family:var(--mono);font-size:.9rem}
+button.row:hover{border-color:var(--dim)}
+button.row:focus-visible{outline:2px solid var(--sig);outline-offset:2px}
+button.row[aria-pressed="true"]{border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+button.row .sw{width:14px;height:14px;border-radius:3px}
+button.row .arr{color:var(--dim)}
+button.row .note{grid-column:2/-1;font-family:var(--sans);font-size:.8rem;color:var(--dim)}
+.steps{margin:0;padding-left:1.3em;display:grid;gap:6px;max-width:70ch}
+@media (max-width:560px){button.row{grid-template-columns:14px minmax(0,1fr);}.row .arr{display:none}}
+@media (prefers-reduced-motion:reduce){.wire{transition:none}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>RC 车接线图 · ESP32 + L298N</h1>
+    <p class="sub">你现有的红色越野车、ESP32-WROOM-32UE、L298N 和两节 18650。点下面任意一行，图里只亮那一根线；再点一次恢复全部。</p>
+  </header>
+
+  <div class="warn">
+    <p><b>先拔掉 L298N 上的两个跳线帽：ENA 和 ENB。</b>它们插着时电机永远全速，ESP32 控制不了速度。拔下来的帽子留着别丢。</p>
+    <p><b>排针从左到右（ENB 那端起）：ENB、IN4、IN3、IN2、IN1、ENA。</b></p>
+    <p><b>12V 跳线帽（5V 稳压旁边那个）要保留插着。</b>拔了 L298N 就不输出 5V，ESP32 没电。</p>
+    <p><b>电池低于 7V 时，L298N 给不了 ESP32 稳定的 5V</b>，ESP32 会反复重启。电池充满前，把 ESP32 的 VIN 线拔掉、用 USB 充电宝供电（GND 线保留）。</p>
+    <p><b>ESP32 要接上 IPEX 天线</b>（板上金色小圆座）。没天线时 WiFi 只有几十厘米，车一走远就失联刹停。</p>
+  </div>
+
+  <section class="grp">
+    <h2>加电解电容（推荐，减少猛前猛后掉线）</h2>
+    <div class="fig" style="padding:8px">
+    <svg viewBox="0 0 720 300" role="img" aria-label="电解电容和电池线一起拧进 L298N 的 12V 和 GND 端子" style="min-width:560px">
+      <!-- 端子座 -->
+      <rect x="200" y="40" width="300" height="70" rx="6" fill="#2f6fd0" style="fill:#2f6fd0"/>
+      <g fill="#c9d3dc" style="fill:#c9d3dc">
+        <circle cx="250" cy="75" r="20"/><circle cx="350" cy="75" r="20"/><circle cx="450" cy="75" r="20"/>
+      </g>
+      <g stroke="#5a6570" stroke-width="4"><line x1="236" y1="75" x2="264" y2="75"/><line x1="250" y1="61" x2="250" y2="89"/><line x1="336" y1="75" x2="364" y2="75"/><line x1="350" y1="61" x2="350" y2="89"/><line x1="436" y1="75" x2="464" y2="75"/><line x1="450" y1="61" x2="450" y2="89"/></g>
+      <text x="250" y="30" text-anchor="middle" class="lbl" font-weight="600">12V</text>
+      <text x="350" y="30" text-anchor="middle" class="lbl" font-weight="600">GND</text>
+      <text x="450" y="30" text-anchor="middle" class="lbl dim">5V（不用）</text>
+      <text x="520" y="80" class="lbl dim">L298N 电源端子（俯视）</text>
+      <!-- 电池线 -->
+      <path d="M250 110 V170 H90" fill="none" stroke="var(--pwr)" stroke-width="5"/>
+      <path d="M350 110 V186 H90" fill="none" stroke="var(--gnd)" stroke-width="5"/>
+      <text x="20" y="166" class="lbl">开关后的 +</text>
+      <text x="20" y="191" class="lbl">电池 −</text>
+      <!-- 电容 -->
+      <path d="M268 110 V160 H290 V200" fill="none" stroke="#a9b3bc" stroke-width="3"/>
+      <path d="M332 110 V200" fill="none" stroke="#a9b3bc" stroke-width="3"/>
+      <rect x="270" y="200" width="84" height="80" rx="10" fill="#1d2a33" style="fill:#1d2a33"/>
+      <rect x="326" y="200" width="28" height="80" rx="6" fill="#c9d3dc" style="fill:#c9d3dc"/>
+      <text x="340" y="228" text-anchor="middle" style="fill:#1d2a33" font-size="22" font-weight="700">−</text>
+      <text x="340" y="258" text-anchor="middle" style="fill:#1d2a33" font-size="22" font-weight="700">−</text>
+      <text x="298" y="236" text-anchor="middle" style="fill:#e8edf2" font-size="13">1000µF</text>
+      <text x="298" y="254" text-anchor="middle" style="fill:#e8edf2" font-size="13">25V</text>
+      <text x="380" y="150" class="lbl" font-weight="600">长脚 = +  → 拧进 12V</text>
+      <text x="380" y="172" class="lbl" font-weight="600">短脚 / 白条那边 = −  → 拧进 GND</text>
+      <text x="380" y="204" class="lbl dim">脚和电池线插在同一个孔里，一起拧紧</text>
+      <text x="380" y="226" class="lbl dim">电容尽量贴着端子，脚剪短一点</text>
+      <text x="380" y="260" class="lbl" style="fill:var(--pwr)" font-weight="600">❗ 正负接反会鼓包甚至爆开</text>
+    </svg>
+    </div>
+    <p class="sub" style="margin:0">电容：470–2200µF，耐压 16V 以上（以后上 3S 就要 25V）。没有的话从旧电器拆也行。白色条纹上印着 “−” 的那一边是负极。装之前先关开关。</p>
+  </section>
+
+  <div class="fig" id="fig">
+  <svg viewBox="0 0 1110 600" role="img" aria-label="电池、L298N、ESP32 与两个电机的接线原理图">
+    <!-- 线（先画，元件盖在上面） -->
+    <g id="wires">
+      <path class="wire" data-w="bat+" stroke="var(--pwr)" d="M150 470 H226"/>
+      <path class="wire" data-w="sw" stroke="var(--pwr)" d="M274 470 H360 V432"/>
+      <path class="wire" data-w="bat-" stroke="var(--gnd)" d="M150 500 H400 V432"/>
+      <path class="wire" data-w="5v" stroke="var(--v5)" d="M440 432 V520 H630 V400 H660"/>
+      <path class="wire" data-w="gnd2" stroke="var(--gnd)" d="M408 432 V540 H645 V422 H660"/>
+      <path class="wire" data-w="ena" stroke="var(--sig)" d="M540 196 H660"/>
+      <path class="wire" data-w="in1" stroke="var(--sig)" d="M540 218 H660"/>
+      <path class="wire" data-w="in2" stroke="var(--sig)" d="M540 240 H660"/>
+      <path class="wire" data-w="in3" stroke="var(--sig)" d="M540 262 H660"/>
+      <path class="wire" data-w="in4" stroke="var(--sig)" d="M540 284 H660"/>
+      <path class="wire" data-w="enb" stroke="var(--sig)" d="M540 306 H660"/>
+      <path class="wire" data-w="out1" stroke="var(--mot)" d="M320 220 H210 V196 H170"/>
+      <path class="wire" data-w="out2" stroke="var(--mot)" d="M320 246 H200 V226 H170"/>
+      <path class="wire" data-w="out3" stroke="var(--mot)" d="M320 320 H210 V316 H170"/>
+      <path class="wire" data-w="out4" stroke="var(--mot)" d="M320 346 H200 V346 H170"/>
+      <path class="wire" data-w="imu1" stroke="var(--v5)" d="M860 196 H940"/>
+      <path class="wire" data-w="imu2" stroke="var(--gnd)" d="M860 218 H940"/>
+      <path class="wire" data-w="imu3" stroke="var(--sig)" d="M860 262 H940"/>
+      <path class="wire" data-w="imu4" stroke="var(--sig)" d="M860 284 H940"/>
+      <path class="wire" data-w="bz1" stroke="var(--sig)" d="M860 306 H920 V340 H940"/>
+      <path class="wire" data-w="bv1" stroke="var(--pwr)" d="M300 470 V578 H690 l5 -8 l10 16 l10 -16 l10 16 l10 -16 l10 16 l5 -8 H900 V350 H860"/>
+      <path class="wire" data-w="bv2" stroke="var(--gnd)" d="M900 420 H990 V440 l8 5 l-16 10 l16 10 l-16 10 l16 10 l-16 10 l8 5 V540 M974 540 H1006 M980 548 H1000 M986 556 H994"/>
+    </g>
+
+    <!-- 电池 -->
+    <rect class="box" x="30" y="440" width="120" height="84" rx="6"/>
+    <text x="42" y="462" class="lbl" font-weight="600">电池 2S</text>
+    <text x="42" y="480" class="lbl dim">7.4V（满电 8.4V）</text>
+    <text x="128" y="474" class="lbl" fill="var(--pwr)">+</text>
+    <text x="128" y="504" class="lbl">−</text>
+    <circle class="pin" cx="150" cy="470" r="5"/><circle class="pin" cx="150" cy="500" r="5"/>
+
+    <!-- 分压节点 -->
+    <circle cx="300" cy="470" r="5" fill="var(--pwr)"/>
+    <circle cx="900" cy="420" r="5" fill="var(--gnd)"/>
+    <text x="720" y="566" text-anchor="middle" class="lbl" font-weight="600">22kΩ</text>
+    <text x="1012" y="484" class="lbl" font-weight="600">10kΩ</text>
+    <text x="1012" y="552" class="lbl dim">GND</text>
+    <text x="600" y="596" text-anchor="middle" class="lbl dim">电池电压检测：开关后的 + → 22kΩ → D34 → 10kΩ → GND</text>
+
+    <!-- 蜂鸣器 -->
+    <rect class="pcb" x="940" y="318" width="150" height="46" rx="6" style="fill:#1f5fbf"/>
+    <circle cx="1060" cy="341" r="14" fill="#111"/>
+    <text x="952" y="345" class="lbl pcbt">I/O</text><text x="985" y="345" class="lbl pcbt" font-size="11">蜂鸣器</text>
+    <circle class="pin" cx="940" cy="340" r="5"/>
+    <!-- MPU6050 -->
+    <rect class="pcb" x="940" y="170" width="150" height="136" rx="6" fill="#2c4f9e" style="fill:#2c4f9e"/>
+    <text x="1015" y="162" text-anchor="middle" class="lbl" font-weight="600">MPU6050 陀螺仪</text>
+    <text x="952" y="200" class="lbl pcbt">VCC</text><text x="952" y="222" class="lbl pcbt">GND</text>
+    <text x="952" y="266" class="lbl pcbt">SDA</text><text x="952" y="288" class="lbl pcbt">SCL</text>
+    <circle class="pin" cx="940" cy="196" r="5"/><circle class="pin" cx="940" cy="218" r="5"/>
+    <circle class="pin" cx="940" cy="262" r="5"/><circle class="pin" cx="940" cy="284" r="5"/>
+
+    <!-- 开关 -->
+    <g>
+      <circle class="pin" cx="230" cy="470" r="5"/><circle class="pin" cx="270" cy="470" r="5"/>
+      <line x1="233" y1="467" x2="266" y2="448" stroke="var(--ink)" stroke-width="3" stroke-linecap="round"/>
+      <text x="250" y="440" text-anchor="middle" class="lbl" font-weight="600">开关</text>
+    </g>
+
+    <!-- 驱动电机 -->
+    <rect class="box" x="30" y="176" width="140" height="70" rx="35"/>
+    <text x="52" y="208" class="lbl" font-weight="600">后轮驱动电机</text>
+    <text x="52" y="226" class="lbl dim">黄/红（黑护套）</text>
+    <circle class="pin" cx="170" cy="196" r="5"/><circle class="pin" cx="170" cy="226" r="5"/>
+
+    <!-- 转向电机 -->
+    <rect class="box" x="30" y="296" width="140" height="70" rx="35"/>
+    <text x="52" y="328" class="lbl" font-weight="600">前轮转向电机</text>
+    <text x="52" y="346" class="lbl dim">蓝/黄</text>
+    <circle class="pin" cx="170" cy="316" r="5"/><circle class="pin" cx="170" cy="346" r="5"/>
+
+    <!-- L298N -->
+    <rect class="pcb" x="320" y="150" width="220" height="282" rx="6"/>
+    <text x="430" y="176" text-anchor="middle" class="lbl pcbt">L298N</text>
+    <text x="330" y="224" class="lbl pcbt">OUT1</text><circle class="pin" cx="320" cy="220" r="5"/>
+    <text x="330" y="250" class="lbl pcbt">OUT2</text><circle class="pin" cx="320" cy="246" r="5"/>
+    <text x="330" y="324" class="lbl pcbt">OUT3</text><circle class="pin" cx="320" cy="320" r="5"/>
+    <text x="330" y="350" class="lbl pcbt">OUT4</text><circle class="pin" cx="320" cy="346" r="5"/>
+    <g text-anchor="end">
+      <text x="530" y="200" class="lbl pcbt">ENA</text><text x="530" y="222" class="lbl pcbt">IN1</text>
+      <text x="530" y="244" class="lbl pcbt">IN2</text><text x="530" y="266" class="lbl pcbt">IN3</text>
+      <text x="530" y="288" class="lbl pcbt">IN4</text><text x="530" y="310" class="lbl pcbt">ENB</text>
+    </g>
+    <circle class="pin" cx="540" cy="196" r="5"/><circle class="pin" cx="540" cy="218" r="5"/>
+    <circle class="pin" cx="540" cy="240" r="5"/><circle class="pin" cx="540" cy="262" r="5"/>
+    <circle class="pin" cx="540" cy="284" r="5"/><circle class="pin" cx="540" cy="306" r="5"/>
+    <text x="360" y="414" text-anchor="middle" class="lbl pcbt">12V</text>
+    <text x="404" y="414" text-anchor="middle" class="lbl pcbt">GND</text>
+    <text x="440" y="414" text-anchor="middle" class="lbl pcbt">5V</text>
+    <circle class="pin" cx="360" cy="432" r="5"/><circle class="pin" cx="404" cy="432" r="5"/><circle class="pin" cx="440" cy="432" r="5"/>
+    <text x="430" y="386" text-anchor="middle" class="lbl pcbt" font-size="10">螺丝端子</text>
+
+    <!-- ESP32 -->
+    <rect class="box" x="660" y="150" width="200" height="300" rx="6"/>
+    <text x="760" y="176" text-anchor="middle" class="lbl" font-weight="600">ESP32-WROOM-32UE</text>
+    <g>
+      <text x="676" y="200" class="lbl">D25</text><text x="676" y="222" class="lbl">D26</text>
+      <text x="676" y="244" class="lbl">D27</text><text x="676" y="266" class="lbl">D32</text>
+      <text x="676" y="288" class="lbl">D33</text><text x="676" y="310" class="lbl">D14</text>
+      <text x="676" y="404" class="lbl" fill="var(--v5)">VIN</text><text x="676" y="426" class="lbl">GND</text>
+    </g>
+    <g class="lbl dim">
+      <text x="730" y="200" class="lbl dim">油门 PWM</text><text x="730" y="222" class="lbl dim">前进</text>
+      <text x="730" y="244" class="lbl dim">后退</text><text x="730" y="266" class="lbl dim">左转</text>
+      <text x="730" y="288" class="lbl dim">右转</text><text x="730" y="310" class="lbl dim">转向力度</text>
+      <text x="730" y="404" class="lbl dim">5V 进</text>
+    </g>
+    <circle class="pin" cx="660" cy="196" r="5"/><circle class="pin" cx="660" cy="218" r="5"/>
+    <circle class="pin" cx="660" cy="240" r="5"/><circle class="pin" cx="660" cy="262" r="5"/>
+    <circle class="pin" cx="660" cy="284" r="5"/><circle class="pin" cx="660" cy="306" r="5"/>
+    <circle class="pin" cx="660" cy="400" r="5"/><circle class="pin" cx="660" cy="422" r="5"/>
+    <text x="720" y="376" text-anchor="middle" class="lbl dim">天线插这里 ↗ IPEX</text>
+
+    <!-- ESP32 右侧引脚 -->
+    <g text-anchor="end">
+      <text x="850" y="200" class="lbl" style="fill:var(--v5)">3V3</text><text x="850" y="222" class="lbl">GND</text>
+      <text x="850" y="266" class="lbl">D21</text><text x="850" y="288" class="lbl">D22</text>
+      <text x="850" y="310" class="lbl">D13</text>
+      <text x="850" y="354" class="lbl">D34</text>
+    </g>
+    <circle class="pin" cx="860" cy="196" r="5"/><circle class="pin" cx="860" cy="218" r="5"/>
+    <circle class="pin" cx="860" cy="262" r="5"/><circle class="pin" cx="860" cy="284" r="5"/>
+    <circle class="pin" cx="860" cy="350" r="5"/><circle class="pin" cx="860" cy="306" r="5"/>
+
+    <text x="555" y="30" text-anchor="middle" class="lbl dim">原理示意 · 针脚在真板上的顺序不一样，照板上印的名字找</text>
+  </svg>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:var(--pwr)"></i>电池 +7.4V</span>
+    <span><i style="background:var(--gnd)"></i>地 GND</span>
+    <span><i style="background:var(--v5)"></i>5V</span>
+    <span><i style="background:var(--sig)"></i>控制信号（杜邦线）</span>
+    <span><i style="background:var(--mot)"></i>电机线</span>
+  </div>
+
+  <section class="list" id="list">
+    <h2>逐根接线清单（15 根必接 + 6 根传感器）</h2>
+  </section>
+
+  <section class="grp">
+    <h2>维修站屏幕（另一块板，不装在车上）</h2>
+    <p class="sub" style="margin:0">2.4" SPI TFT 240×320 带触摸（14 针）。屏幕上的显示和触摸共用同一组 SPI 线，所以 SCK/MOSI/MISO 各有两个脚接到同一个引脚。用面包板或者一分二杜邦线。</p>
+    <div class="fig" style="padding:0">
+    <table style="width:100%;border-collapse:collapse;font:13px var(--mono);min-width:520px">
+      <thead><tr style="text-align:left;color:var(--dim)"><th style="padding:10px 14px">屏幕脚</th><th style="padding:10px">ESP32-C3 SuperMini</th><th style="padding:10px">普通 ESP32 DevKit</th><th style="padding:10px">作用</th></tr></thead>
+      <tbody>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">VCC</td><td>3V3</td><td>3V3</td><td style="font-family:var(--sans);color:var(--dim)">屏幕电源</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">GND</td><td>GND</td><td>GND</td><td></td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">CS</td><td>GPIO7</td><td>D5</td><td style="font-family:var(--sans);color:var(--dim)">显示片选</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">RESET</td><td>GPIO20</td><td>D16</td><td></td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">DC</td><td>GPIO10</td><td>D4</td><td></td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">SDI (MOSI) + T_DIN</td><td>GPIO6</td><td>D23</td><td style="font-family:var(--sans);color:var(--dim)">两个脚接同一个引脚</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">SCK + T_CLK</td><td>GPIO4</td><td>D18</td><td style="font-family:var(--sans);color:var(--dim)">两个脚接同一个引脚</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">SDO (MISO) + T_DO</td><td>GPIO5</td><td>D19</td><td style="font-family:var(--sans);color:var(--dim)">两个脚接同一个引脚</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">LED</td><td>3V3</td><td>3V3</td><td style="font-family:var(--sans);color:var(--dim)">背光，不接屏幕是黑的</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">T_CS</td><td>GPIO21</td><td>D17</td><td style="font-family:var(--sans);color:var(--dim)">触摸片选</td></tr>
+        <tr style="border-top:1px solid var(--line)"><td style="padding:8px 14px">T_IRQ</td><td>GPIO3</td><td>D27</td><td style="font-family:var(--sans);color:var(--dim)">有人摸屏幕的信号</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section class="grp">
+    <h2>接线顺序</h2>
+    <ol class="steps">
+      <li>拔掉 ENA、ENB 两个跳线帽，保留 12V 跳线帽。</li>
+      <li>先接 4 根电机线（紫色），拧紧螺丝端子。</li>
+      <li>接 6 根杜邦信号线（蓝色），对着清单一根根数。</li>
+      <li>接 ESP32 的 VIN 和 GND（橙、黑）。</li>
+      <li>电池红线先接到<b>开关</b>，开关另一脚接 L298N 12V；黑线直接进 GND。</li>
+      <li><b>开关先关着</b>，全部线接好、检查一遍，再打开开关。</li>
+      <li>烧录固件时只插 USB 线、不接电池最安全；烧好再拔 USB、接电池。</li>
+    </ol>
+  </section>
+</div>
+
+<script>
+const W=[
+ {g:'电源（螺丝端子，粗线）',items:[
+  ['bat+','电池 +（红）','开关 一脚','--pwr','开关只接在红线（+）上，黑线不经过开关'],
+  ['sw','开关 另一脚','L298N 12V','--pwr','开关关上 = 车完全断电；插 USB 烧录前先关掉'],
+  ['bat-','车底黑线（电池仓 −）','L298N GND','--gnd',''],
+  ['5v','L298N 5V','ESP32 VIN','--v5','L298N 自带稳压输出 5V 给 ESP32；不要接到 3V3 脚'],
+  ['gnd2','L298N GND','ESP32 GND','--gnd','和电池黑线挤同一个端子，必须共地，不然信号乱']]},
+ {g:'控制信号（杜邦线 母对母）',items:[
+  ['ena','ESP32 D25','L298N ENA','--sig','拔掉跳线帽后有两根针：插和 IN1–IN4 排成一直线那根；另一根是板上 5V，插错会烧 ESP32'],
+  ['in1','ESP32 D26','L298N IN1','--sig',''],
+  ['in2','ESP32 D27','L298N IN2','--sig',''],
+  ['in3','ESP32 D32','L298N IN3','--sig',''],
+  ['in4','ESP32 D33','L298N IN4','--sig',''],
+  ['enb','ESP32 D14','L298N ENB','--sig','同 ENA：插和 IN 排成一直线那根，不要插 5V 那根']]},
+ {g:'电机（螺丝端子）',items:[
+  ['out1','L298N OUT1','驱动电机 黄（黑护套里）','--mot','你测的：黄 +、红 − = 前进'],
+  ['out2','L298N OUT2','驱动电机 红（黑护套里）','--mot','和电池红线别搞混，这根从车尾过来'],
+  ['out3','L298N OUT3','转向电机 蓝','--mot','你测的：蓝 +、黄 − = 左转'],
+  ['out4','L298N OUT4','转向电机 黄','--mot','']]},
+ {g:'传感器 · MPU6050 陀螺仪（可选，翻车/碰撞/G 力）',items:[
+  ['imu1','ESP32 3V3','MPU6050 VCC','--v5','蓝色 GY-521 板自带稳压：接 3V3 读不到的话，改接 ESP32 的 VIN（5V）也安全'],
+  ['imu2','ESP32 GND','MPU6050 GND','--gnd',''],
+  ['imu3','ESP32 D21','MPU6050 SDA','--sig',''],
+  ['imu4','ESP32 D22','MPU6050 SCL','--sig','模块平贴车身，印着 X 箭头朝车头；另外几个脚（XDA、XCL、AD0、INT）不接。读不到：看开机日志的「I2C 扫描到」。空 = 线没接好或 SDA/SCL 接反；有 0x68/0x69 = 好了；有别的地址 = 接到别的模块了。排针要焊，只插着不焊很容易接触不良']]},
+ {g:'声音 · 蜂鸣器模块（可选，开机音 / 倒车嘀嘀 / 喇叭 / 音乐）',items:[
+  ['bz1','ESP32 D13','蜂鸣器 I/O（有的写 S 或 SIG）','--sig','另外两个脚：VCC → ESP32 3V3，GND → ESP32 GND（可以和陀螺仪共用，挤一个排针或者焊在一起）。不响或者一直响：UI「声音」页把「低电平触发」勾上/取消；只会嘀不会唱歌 = 有源蜂鸣器，类型选「有源」'],
+  ['bz2','蜂鸣器 VCC','ESP32 3V3','--v5',''],
+  ['bz3','蜂鸣器 GND','ESP32 GND','--gnd','']]},
+ {g:'转向 · 舵机（可选，想要精确的比例转向才换）',items:[
+  ['sv1','ESP32 D18','舵机 信号线（橙 / 黄）','--sig','网页「手感 → 转向」选「舵机」才会输出。推荐 MG90S（金属齿，约 RM 8），SG90 也行但容易打齿'],
+  ['sv2','ESP32 VIN（5V）','舵机 红线','--v5','舵机用 5V。ESP32 现在用充电宝供电，VIN 就是 5V。不要接 3V3，带不动'],
+  ['sv3','ESP32 GND','舵机 棕线 / 黑线','--gnd','换了舵机以后，原来的转向电机两根线从 L298N 的 OUT3 / OUT4 拔掉']]},
+ {g:'传感器 · 电池电压（可选，两个电阻）',items:[
+  ['bv1','开关后的电池 +（L298N 12V 端子）','22kΩ 电阻 → ESP32 D34','--pwr','一定要经过电阻！电池直接接 D34 会烧 ESP32'],
+  ['bv2','ESP32 D34','10kΩ 电阻 → GND','--gnd','没有 22k/10k 的话，用任意大约 2:1 的两个（比如 20k/10k），然后把固件里 BATT_DIVIDER 改成 (上+下)/下']]}
+];
+const list=document.getElementById('list'),fig=document.getElementById('fig');
+let cur=null;
+W.forEach(grp=>{const d=document.createElement('div');d.className='grp';d.innerHTML='<h3>'+grp.g+'</h3>';
+  grp.items.forEach(([id,a,b,c,n])=>{const r=document.createElement('button');r.className='row';r.id='w-'+id;r.setAttribute('aria-pressed','false');
+    r.innerHTML='<span class="sw" style="background:var('+c+')"></span><span>'+a+'</span><span class="arr">→</span><span>'+b+'</span>'+(n?'<span class="note">'+n+'</span>':'');
+    r.onclick=()=>sel(cur===id?null:id);d.appendChild(r)});list.appendChild(d)});
+function sel(id){cur=id;fig.classList.toggle('dimmed',!!id);
+  document.querySelectorAll('.wire').forEach(w=>w.classList.toggle('on',w.dataset.w===id));
+  document.querySelectorAll('button.row').forEach(r=>r.setAttribute('aria-pressed',r.id==='w-'+id));}
+document.querySelectorAll('.wire').forEach(w=>{w.style.cursor='pointer';w.addEventListener('click',()=>sel(cur===w.dataset.w?null:w.dataset.w))});
+</script>

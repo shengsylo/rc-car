@@ -1,0 +1,56 @@
+{
+  "id": "T008",
+  "title": "采购 / 购物车状态",
+  "status": "active",
+  "created": "2026-11-16",
+  "summary": "Shopee 购物车里这个项目的零件；owner 自己结账。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "删掉 Fayee、MJX 14304、34mm 轮、MG90S、TB6612、SR3100、1000µF、磁铁、KY-003",
+      "status": "done"
+    },
+    {
+      "step": "Bambu A1 mini + 1 卷 RM1,205（修正回 1 台）",
+      "status": "done"
+    },
+    {
+      "step": "3.7g 金属齿舵机 RM23.10",
+      "status": "done"
+    },
+    {
+      "step": "20T 2mm 齿轮 RM0.70",
+      "status": "done"
+    },
+    {
+      "step": "15T 3mm 黄铜齿轮 RM1.83",
+      "status": "todo"
+    },
+    {
+      "step": "470µF 16V 电容",
+      "status": "todo"
+    },
+    {
+      "step": "FPV 接收器 ×2 + AV 转 HDMI ×2",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [
+    {
+      "k": "已在购物车",
+      "v": "ESP32-C3×2, DRV8833×2, MPU6050, N20×2, LAVA 580×2, BT2.0 充电器, BT2.0 插头×3, 螺丝套装, 24AWG 线, 0.1µF",
+      "note": ""
+    },
+    {
+      "k": "Shopee 限速",
+      "v": "商品页常空白，要隔一阵再试",
+      "note": ""
+    }
+  ],
+  "files": [],
+  "log": []
+}

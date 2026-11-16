@@ -1,0 +1,29 @@
+{
+  "id": "T011",
+  "title": "3D 打印机集成（Phase 5）",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "Bambu A1 mini：LAN MQTT/FTPS 状态 + 上传；manifold-3d 生成支架 → 3MF。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "打印机到货手动打几次",
+      "status": "todo"
+    },
+    {
+      "step": "核实 LAN 模式能否下发打印",
+      "status": "todo"
+    },
+    {
+      "step": "Bambu 插件",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [],
+  "log": []
+}

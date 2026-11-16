@@ -1,0 +1,41 @@
+{
+  "id": "T003",
+  "title": "Phase 1 设备管理：UI 里刷机/日志/配网/OTA",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "替换 flash.sh：插 USB → UI 点编译、烧录、配网、自检。",
+  "problem": "",
+  "idea": "端口发现（arduino-cli board list）→ 选项目/target/车号 → 生成 pins.h（ERC 拦错）→ 编译 → BuildRegistry 入库 → 烧录（独占串口）→ NVS 配网（bin 里不再有密码）→ 等 /car hello 验证 → 自检。OTA 选版本 + sha256 + 3 次失败自动回退。",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "固件改 NVS 配网",
+      "status": "todo"
+    },
+    {
+      "step": "多 target / pins.h（ESP32 + C3）",
+      "status": "todo"
+    },
+    {
+      "step": "OTA 回退",
+      "status": "todo"
+    },
+    {
+      "step": "后端 JobRunner + PortManager（serialport）",
+      "status": "todo"
+    },
+    {
+      "step": "Studio 设备面板",
+      "status": "todo"
+    },
+    {
+      "step": "flash.sh 改成薄 CLI",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [],
+  "log": []
+}

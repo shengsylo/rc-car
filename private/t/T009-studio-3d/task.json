@@ -1,0 +1,33 @@
+{
+  "id": "T009",
+  "title": "Studio：3D 装配 + 动画（Phase 2 / 4）",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "零件库、3D 摆放、适配检查；之后关节 + 遥测驱动动画。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "project.json + schema",
+      "status": "todo"
+    },
+    {
+      "step": "8–10 个零件 part.json",
+      "status": "todo"
+    },
+    {
+      "step": "3D 摆放 + 俯视投影 + keep-in 适配检查",
+      "status": "todo"
+    },
+    {
+      "step": "carRig.js 关节 + 遥测绑定（Phase 4）",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [],
+  "log": []
+}

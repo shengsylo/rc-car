@@ -1,0 +1,37 @@
+{
+  "id": "T010",
+  "title": "Studio：真实接线 + ERC + pins.h（Phase 3）",
+  "status": "open",
+  "created": "2026-11-16",
+  "summary": "自己拉线、剪线、看线长；电压/电平/引脚冲突检查；生成固件引脚。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "SVG 接线编辑",
+      "status": "todo"
+    },
+    {
+      "step": "ERC 规则",
+      "status": "todo"
+    },
+    {
+      "step": "生成 pins.h",
+      "status": "todo"
+    },
+    {
+      "step": "接线清单取代 wiring.html",
+      "status": "todo"
+    },
+    {
+      "step": "KiCad 导出（Phase 6）",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [],
+  "log": []
+}

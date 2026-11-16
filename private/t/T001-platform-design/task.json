@@ -1,0 +1,59 @@
+{
+  "id": "T001",
+  "title": "RC Studio 平台设计方案",
+  "status": "done",
+  "created": "2026-11-16",
+  "summary": "Fable agent 出的完整设计：UI 管后台、刷机、3D、接线、插件、打印机。",
+  "problem": "owner 要一个 UI 控制全部后台（插 USB 刷 ESP32、看日志、配网），加 3D 动画编辑、真实接线/电路、3D 和接线双向同步、可复用到别的项目、以后接 3D 打印机。",
+  "idea": "后端 arduino-cli + serialport 刷机；ui.html 不重写，新建 Studio（Vite+TS+React，仅 127.0.0.1）；每个零件只存一份 3D 位姿，布局图是投影，无同步问题；自研 SVG 模块级接线 + ERC，PCB 导出 KiCad；插件系统；Bambu 插件走 LAN MQTT/FTPS。",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "Fable 设计",
+      "status": "done"
+    },
+    {
+      "step": "owner 审阅方案",
+      "status": "todo"
+    }
+  ],
+  "issues": [
+    {
+      "text": "范围风险：Phase 2–6 是工具，不在付费远程开车关键路径上，每阶段要设时间上限",
+      "severity": "high",
+      "open": true
+    },
+    {
+      "text": "Bambu LAN 控制是否要开发者模式，未核实",
+      "severity": "med",
+      "open": true
+    }
+  ],
+  "data": [
+    {
+      "k": "总工作量",
+      "v": "约 5–7 周",
+      "note": "你 + Claude 专注工作日"
+    },
+    {
+      "k": "Phase 0",
+      "v": "1–2 天",
+      "note": ""
+    },
+    {
+      "k": "Phase 1",
+      "v": "4–6 天",
+      "note": ""
+    }
+  ],
+  "files": [
+    "PLATFORM_DESIGN.md"
+  ],
+  "log": [
+    {
+      "at": "2026-11-16",
+      "text": "Fable 完成设计，存为 PLATFORM_DESIGN.md"
+    }
+  ]
+}

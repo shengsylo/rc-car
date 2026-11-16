@@ -1,0 +1,60 @@
+{
+  "id": "T006",
+  "title": "FPV 两套（保时捷 + 红车）",
+  "status": "active",
+  "created": "2026-11-16",
+  "summary": "模拟 5.8G：车上 25mW 一体摄像头，车外接收器 → HDMI 显示器。",
+  "problem": "Shopee 马来西亚价格是淘宝 3–5 倍；淘宝会挡自动化，需 owner 自己下单。",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "Eachine TX06 48CH（RC Official Store）加进 Shopee",
+      "status": "done"
+    },
+    {
+      "step": "Eachine TX06 40CH（雪兰莪，仅剩 1 个）确认是否在购物车",
+      "status": "todo"
+    },
+    {
+      "step": "视频接收器 ×2（RC832HD RM375.8 或淘宝 RX5808/UVC）",
+      "status": "todo"
+    },
+    {
+      "step": "AV 转 HDMI ×2",
+      "status": "todo"
+    }
+  ],
+  "issues": [
+    {
+      "text": "owner 的 FPV 朋友说两台可压到约 RM200/台以内（淘宝）；Shopee 方案约 RM1,090",
+      "severity": "high",
+      "open": true
+    },
+    {
+      "text": "RC832HD 卖家无评价",
+      "severity": "med",
+      "open": true
+    }
+  ],
+  "data": [
+    {
+      "k": "TX06 输入",
+      "v": "3.3–5.5V",
+      "note": "1S 可用"
+    },
+    {
+      "k": "TX06 48CH",
+      "v": "RM140.24",
+      "note": ""
+    },
+    {
+      "k": "TX06 40CH",
+      "v": "RM149.99",
+      "note": ""
+    }
+  ],
+  "files": [],
+  "log": []
+}

@@ -1,0 +1,25 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$d/tools/tracker.py\" ] || d=\"$(git rev-parse --show-toplevel 2>/dev/null)\"; [ -f \"$d/tools/tracker.py\" ] || exit 0; python3 \"$d/tools/tracker.py\" hook-post"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "d=\"${CLAUDE_PROJECT_DIR:-.}\"; [ -f \"$d/tools/tracker.py\" ] || d=\"$(git rev-parse --show-toplevel 2>/dev/null)\"; [ -f \"$d/tools/tracker.py\" ] || exit 0; python3 \"$d/tools/tracker.py\" hook-stop"
+          }
+        ]
+      }
+    ]
+  }
+}

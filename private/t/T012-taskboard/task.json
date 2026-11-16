@@ -1,0 +1,42 @@
+{
+  "id": "T012",
+  "title": "Taskboard（tracker 系统）接入",
+  "status": "active",
+  "created": "2026-11-16",
+  "summary": "照 xau-lab 的 tracker 系统搭好；差一个独立的 Supabase project。",
+  "problem": "",
+  "idea": "",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "复制 tracker.py / sb.py / 模板 / hooks",
+      "status": "done"
+    },
+    {
+      "step": "建 12 个 tracker",
+      "status": "done"
+    },
+    {
+      "step": "owner 新建 Supabase project，填 .env，跑 schema.sql",
+      "status": "todo"
+    },
+    {
+      "step": "python3 tools/tracker.py build 推送",
+      "status": "todo"
+    },
+    {
+      "step": "发布登录壳（可选）",
+      "status": "todo"
+    }
+  ],
+  "issues": [],
+  "data": [],
+  "files": [
+    "tools/tracker.py",
+    "tools/sb.py",
+    "supabase/schema.sql",
+    ".claude/settings.json"
+  ],
+  "log": []
+}

@@ -1,0 +1,1628 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#16181c">
+<title>RC 车手台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* 设计：赛道 —— 沥青灰底、路肩红白、维修区黄、绿旗绿。数字用窄体，像计时屏 */
+:root{
+  --asphalt:#16181c; --panel:#202329; --panel2:#2a2e35; --line:#3a3f48; --chalk:#f2f0eb; --dim:#9aa0a8;
+  --kerb:#e8322c; --pit:#f5c400; --flag:#2fbf71; --blue:#3d8bff; --glass:rgba(22,24,28,.72);
+  --num:"Barlow Condensed","DIN Condensed","Arial Narrow",system-ui,sans-serif;
+  --txt:"Barlow",-apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif;
+  --sl:env(safe-area-inset-left,0px); --sr:env(safe-area-inset-right,0px); --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--asphalt);color:var(--chalk);font:14px/1.4 var(--txt);overflow:hidden}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+[hidden]{display:none!important}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 14px;font-weight:600;cursor:pointer;touch-action:manipulation}
+button:hover{border-color:#566}
+button:disabled{opacity:.4;cursor:default}
+button.go{background:var(--flag);border-color:var(--flag);color:#06140c}
+button.stop{background:var(--kerb);border-color:var(--kerb);color:#fff}
+button.warn{background:var(--pit);border-color:var(--pit);color:#1a1500}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--pit);outline-offset:2px}
+select{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.n{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:.01em}
+
+/* ========== 整体布局 ========== */
+#app{position:fixed;inset:0;display:grid}
+#bar{grid-area:bar;display:flex;align-items:center;gap:8px;padding:calc(6px + var(--st)) calc(10px + var(--sr)) 6px calc(10px + var(--sl));background:var(--asphalt);border-bottom:1px solid var(--line);z-index:6;min-width:0}
+#stage{grid-area:stage;position:relative;overflow:hidden;background:#0e131b}
+#deck{grid-area:deck;position:relative;display:grid;grid-template-columns:1fr auto 1fr;touch-action:none;z-index:4}
+#side{grid-area:side;background:var(--panel);display:flex;flex-direction:column;min-height:0;z-index:8}
+#strip{grid-area:strip}
+
+body.desk #app{grid-template:"bar bar" auto "stage side" 1fr / 1fr 380px}
+body.desk #deck{position:absolute;left:0;right:380px;bottom:0;height:46%;pointer-events:none}
+body.desk #deck>*{pointer-events:auto}
+body.desk.nocoarse #deck .pad{visibility:hidden}
+body.desk.nocoarse #deck .pad .paddle{visibility:visible}
+body.desk #side{border-left:1px solid var(--line)}
+body.desk #sideClose,body.desk #strip{display:none}
+body.desk #kbHelp{display:block}
+
+body.land #app{grid-template:"bar" auto "stage" 1fr / 1fr}
+body.land #deck{position:fixed;left:0;right:0;bottom:0;top:52px}
+body.land #strip{display:none}
+body.land #side{position:fixed;top:0;right:0;bottom:0;width:min(400px,92vw);border-left:1px solid var(--line);box-shadow:-20px 0 40px #0008;transform:translateX(105%);transition:transform .22s}
+body.land.sheet #side{transform:none}
+body.land #bar{background:linear-gradient(#16181cf0,#16181c00);border-bottom:0;position:fixed;left:0;right:0;top:0}
+
+body.port #app{grid-template:"bar" auto "stage" minmax(170px,40vh) "strip" auto "deck" 1fr / 1fr}
+body.port #side{position:fixed;left:0;right:0;bottom:0;height:min(78vh,640px);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -20px 40px #0009;transform:translateY(105%);transition:transform .22s}
+body.port.sheet #side{transform:none}
+body.port #deck{border-top:1px solid var(--line);background:var(--asphalt);grid-template:"mid mid" auto "l r" 1fr / 1fr 1fr}
+body.port #padL{grid-area:l} body.port #padR{grid-area:r}
+body.port #mid{grid-area:mid;flex-direction:row;padding:10px 10px 4px;gap:12px}
+body.port #midRow{flex-direction:column}
+body.port #btnHorn{width:72px;height:72px}
+body.port #brand,body.port #pLat,body.port #pBat{display:none}
+@media (prefers-reduced-motion:reduce){#side{transition:none!important}}
+
+/* ========== 顶栏 ========== */
+#brand{display:flex;gap:3px;align-items:center;margin-right:4px}
+#brand i{width:6px;height:18px;background:repeating-linear-gradient(var(--kerb) 0 6px,var(--chalk) 6px 12px);border-radius:1px}
+#brand b{font:700 18px var(--num);letter-spacing:.04em;margin-left:4px}
+#carSel{max-width:140px}
+.pill{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--glass);border:1px solid var(--line);white-space:nowrap;font-size:13px}
+.pill b{font:600 16px var(--num)}
+.lamp{width:9px;height:9px;border-radius:50%;background:var(--kerb);flex:none}
+.lamp.ok{background:var(--flag)}.lamp.warn{background:var(--pit)}
+.sp{flex:1;min-width:4px}
+#btnDrive{white-space:nowrap}
+#btnMode{border-radius:999px;padding:6px 12px;font:700 15px var(--num);letter-spacing:.03em;white-space:nowrap}
+#btnMenu{display:flex;align-items:center;gap:6px}
+body.desk #btnMenu{display:none}
+#bar>*{flex-shrink:0} #carSel{flex-shrink:1;min-width:64px}
+/* 横屏手机加上刘海的安全区，顶栏很挤：标签先藏，电池再藏，设置按钮永远在 */
+@media (max-width:1000px){#pLat .lbl,#pBat .lbl,#brand b{display:none} .pill{padding:5px 8px} #btnDrive{padding:9px 10px}}
+@media (max-width:760px){#pBat{display:none} #carSel{max-width:96px}}
+@media (max-width:420px){#pLink{display:none}}
+
+/* ========== 画面 + 仪表 ========== */
+canvas#pov,#w3d,#w3d canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+#camtag{position:absolute;left:12px;bottom:10px;font-size:12px;color:var(--dim);background:var(--glass);padding:3px 8px;border-radius:6px;z-index:2}
+body.land #camtag{display:none}
+body.desk #camtag{left:auto;right:136px}
+#lights{position:absolute;left:50%;top:14px;transform:translateX(-50%);display:flex;gap:10px;padding:10px 14px;background:#0b0c0e;border-radius:10px;border:1px solid var(--line);z-index:3}
+body.land #lights{top:58px}
+#lights span{width:30px;height:30px;border-radius:50%;background:#2b1212;box-shadow:inset 0 0 0 3px #000}
+#lights span.on{background:radial-gradient(circle at 40% 35%,#ff8a7a,var(--kerb) 55%,#7a0d08);box-shadow:0 0 18px #e8322caa}
+#lights.go span{background:radial-gradient(circle at 40% 35%,#9ff0c0,var(--flag) 55%,#0d5a2f);box-shadow:0 0 18px #2fbf71aa}
+#banner{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;padding:14px 22px;border-radius:12px;background:var(--glass);border:1px solid var(--line);max-width:86%;z-index:2;pointer-events:none}
+#banner b{display:block;font:700 26px var(--num);letter-spacing:.02em}
+#banner small{display:block;color:var(--dim);margin-top:2px}
+#toasts{position:absolute;right:12px;top:12px;display:flex;flex-direction:column;gap:6px;align-items:flex-end;z-index:5;pointer-events:none;max-width:70%}
+body.land #toasts{top:60px;right:calc(124px + var(--sr))}
+body.port #toasts{right:8px;top:8px;max-width:60%}
+.toast{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--flag);padding:7px 11px;border-radius:8px;font-size:13px;animation:tin .18s ease-out}
+.toast.bad{border-left-color:var(--kerb)}.toast.warn{border-left-color:var(--pit)}
+@keyframes tin{from{transform:translateX(16px);opacity:0}}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+
+/* 转速表 / 油门表 + G 力表 */
+.dial{position:absolute;pointer-events:none;z-index:2}
+#dThr{left:12px;top:12px;width:150px;height:150px}
+#dG{right:12px;bottom:12px;width:108px;height:108px}
+body.land #dThr{left:calc(10px + var(--sl));top:56px;width:132px;height:132px}
+body.land #dG{right:calc(10px + var(--sr));top:56px;bottom:auto;width:100px;height:100px}
+body.port #dThr{width:112px;height:112px;left:8px;top:8px}
+body.port #dG{width:80px;height:80px;right:8px;bottom:8px}
+/* 换挡灯：F1 方向盘上那一排 */
+#leds{position:absolute;left:50%;top:12px;transform:translateX(-50%);display:flex;gap:5px;padding:7px 10px;border-radius:999px;background:#0b0c0ecc;border:1px solid var(--line);z-index:2;pointer-events:none}
+body.land #leds{top:58px}
+body.port #leds{top:8px;gap:3px;padding:5px 8px}
+#leds i{width:14px;height:14px;border-radius:50%;background:#26282d}
+body.port #leds i{width:10px;height:10px}
+#leds i.g{background:var(--flag);box-shadow:0 0 8px #2fbf71}
+#leds i.r{background:var(--kerb);box-shadow:0 0 8px #e8322c}
+#leds i.b{background:var(--blue);box-shadow:0 0 10px #3d8bff}
+#lights:not([hidden])~#leds{opacity:0}
+
+#strip{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--panel)}
+#strip div{padding:6px 8px;border-right:1px solid var(--line)}
+#strip div:last-child{border-right:0}
+#strip span{display:block;font-size:11px;color:var(--dim)}
+#strip b{font:600 18px var(--num)}
+
+/* ========== 控制区 ========== */
+.pad{position:relative;touch-action:none;overflow:hidden}
+.pad .hint{position:absolute;left:0;right:0;bottom:calc(14px + var(--sb));text-align:center;color:#ffffff40;font-size:12px;pointer-events:none}
+.ring{position:absolute;width:128px;height:128px;border-radius:50%;border:2px solid #f2f0eb55;transform:translate(-50%,-50%);display:none;pointer-events:none}
+.ring i{position:absolute;left:50%;top:50%;width:54px;height:54px;border-radius:50%;background:#f2f0ebcc;transform:translate(-50%,-50%)}
+#padR .ring{border-radius:40px;width:84px;height:150px}
+#padR .ring i{background:var(--flag)}
+#padR .ring.rev i{background:var(--kerb)}
+.pad::before{content:"";position:absolute;border:2px dashed #f2f0eb26;pointer-events:none}
+#padL::before{left:14%;right:14%;top:50%;height:64px;margin-top:-32px;border-radius:32px}
+#padR::before{left:50%;width:64px;margin-left:-32px;top:20%;bottom:16%;border-radius:32px}
+body.land .pad::before,body.desk .pad::before{display:none}
+body.port .pad .hint{color:#f2f0eb73;bottom:calc(6px + var(--sb))}
+#sbtns{position:absolute;left:calc(18px + var(--sl));right:10px;bottom:calc(46px + var(--sb));display:flex;gap:16px}
+body.port #sbtns{bottom:calc(30px + var(--sb));left:12px;gap:10px}
+.sbtn{width:92px;height:92px;border-radius:50%;border:2px solid #f2f0eb66;background:#16181caa;display:grid;place-items:center;font-size:32px;touch-action:none}
+body.port .sbtn{width:76px;height:76px}
+.sbtn.on{background:var(--chalk);color:var(--asphalt)}
+/* 换挡拨片：左减右加，和 F1 一样 */
+.paddle{position:absolute;top:10px;width:76px;height:58px;border-radius:12px;background:#16181ccc;border:2px solid var(--chalk);font:700 26px var(--num);display:grid;place-items:center;touch-action:none;z-index:2;padding:0}
+.paddle.on{background:var(--chalk);color:var(--asphalt)}
+#padDn{right:10px} #padUp{left:10px}
+body.land .paddle{top:auto;bottom:calc(130px + var(--sb))}
+body.land #padDn{right:auto;left:calc(16px + var(--sl))} body.land #padUp{left:auto;right:calc(16px + var(--sr))}
+body.desk .paddle{top:auto;bottom:100px}
+#mid{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:12px;padding:0 6px calc(14px + var(--sb))}
+#btnHorn{width:84px;height:84px;border-radius:50%;padding:0;background:#16181ccc;border:3px solid var(--pit);color:var(--pit);display:grid;place-items:center;touch-action:none}
+#btnHorn.on{background:var(--pit);color:#1a1500}
+#btnHorn svg{width:38px;height:38px}
+#midRow{display:flex;gap:8px}
+.round{display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:999px;background:#16181ccc;font-size:13px}
+.round svg{width:16px;height:16px}
+body.port #mid{justify-content:center;padding-bottom:calc(8px + var(--sb))}
+body.desk #mid{padding-bottom:18px}
+body.desk #btnSet{display:none}
+body.land #mid{flex-direction:row;align-items:center;align-self:end;padding-bottom:calc(8px + var(--sb));gap:10px}
+body.land #btnHorn{width:62px;height:62px} body.land #btnHorn svg{width:28px;height:28px}
+#kbHelp{display:none;position:absolute;left:12px;bottom:12px;max-width:290px;color:var(--dim);font-size:12px;background:var(--glass);padding:6px 10px;border-radius:8px;line-height:1.7;pointer-events:none;z-index:2}
+#kbHelp kbd{font:600 12px var(--num);background:var(--panel2);border:1px solid var(--line);border-radius:4px;padding:0 5px;color:var(--chalk)}
+
+/* ========== 面板 ========== */
+#sideHead{display:flex;align-items:center;gap:8px;padding:calc(10px + var(--st)) 12px 0}
+body.port #sideHead{padding-top:10px}
+#tabs{display:flex;gap:2px;flex:1;overflow-x:auto;scrollbar-width:none}
+#tabs button{background:none;border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 10px 8px;color:var(--dim);white-space:nowrap}
+#tabs button[aria-selected=true]{color:var(--chalk);border-bottom-color:var(--kerb)}
+#sideClose{background:none;border:0;font-size:22px;padding:4px 10px;line-height:1}
+#sideBody{flex:1;overflow:auto;padding:12px 14px calc(18px + var(--sb));touch-action:pan-y;-webkit-user-select:text;user-select:text;border-top:1px solid var(--line)}
+.tab{display:grid;gap:14px;align-content:start}
+h4{margin:0 0 8px;font:600 15px var(--txt)}
+.note{margin:0;color:var(--dim);font-size:13px}
+.box{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row>button{flex:1}
+.slide{display:grid;gap:4px;margin-top:8px}
+.slide .t{display:flex;justify-content:space-between;gap:10px;font-size:13px}
+.slide .t b{font:600 16px var(--num);color:var(--pit)}
+.slide small{color:var(--dim);font-size:12px}
+input[type=range]{width:100%;accent-color:var(--pit);height:28px}
+.chk{display:flex;gap:10px;align-items:center;font-size:14px;margin-top:8px}
+.chk input{width:22px;height:22px;accent-color:var(--pit);flex:none}
+input[type=text],textarea{background:var(--asphalt);border:1px solid var(--line);border-radius:8px;padding:9px 10px;width:100%;font-size:15px}
+textarea{font:13px/1.4 ui-monospace,Menlo,monospace;min-height:64px;resize:vertical}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;border-right:1px solid var(--line);background:var(--asphalt);padding:10px 4px}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--chalk);color:var(--asphalt)}
+.seg small{display:block;font-weight:400;font-size:11px;opacity:.75}
+
+#tele{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#tele div{background:var(--panel2);padding:8px 9px}
+#tele span{display:block;font-size:11px;color:var(--dim)}
+#tele b{font:600 20px var(--num)}
+
+#songs{display:grid;gap:6px}
+.song{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;background:var(--asphalt);border:1px solid var(--line);text-align:left;font-weight:500}
+.song .ic{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--panel2);flex:none;font-size:11px}
+.song.on{border-color:var(--pit)} .song.on .ic{background:var(--pit);color:#1a1500}
+
+#stList{margin:0;padding-left:22px;display:grid;gap:6px}
+#stList li{color:var(--dim)} #stList li.run{color:var(--pit);font-weight:600} #stList li.ok{color:var(--flag)} #stList li.bad{color:var(--kerb)}
+#stList li small{display:block;color:var(--dim);font-weight:400}
+.dg{border-left:3px solid var(--pit);background:var(--asphalt);border-radius:6px;padding:7px 9px;font-size:13px;margin-bottom:6px}
+.dg.bad{border-left-color:var(--kerb)} .dg.ok{border-left-color:var(--flag)}
+.dg i{color:var(--dim);font-style:normal;font-size:12px}
+.btnlink{flex:1;display:block;text-align:center;background:var(--pit);color:#1a1500;font-weight:600;border-radius:8px;padding:10px 14px;text-decoration:none}
+#wheel{position:absolute;left:50%;top:50%;width:120px;height:120px;margin:-60px 0 0 -60px;pointer-events:none;opacity:.8}
+body.land #wheel{top:58%}
+#scrim{position:fixed;inset:0;background:#0007;z-index:7}
+body.desk #scrim{display:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <div id="brand" aria-label="RC 车手台"><i></i><i></i><b>RC</b></div>
+    <select id="carSel" aria-label="选车"><option>没有车</option></select>
+    <button id="btnDrive" class="go">开这台车</button>
+    <button id="btnMode" title="驾驶模式：直驱 / 自动挡 / 手动挡">直驱</button>
+    <div class="sp"></div>
+    <div class="pill" id="pLink" title="服务器 / 车"><span class="lamp" id="lSrv"></span><span class="lamp" id="lCar"></span></div>
+    <div class="pill" id="pLat" title="手机到车的单程延迟"><span class="lbl">延迟</span><b id="vLatTop">–</b></div>
+    <div class="pill" id="pBat" title="电池"><span class="lbl">电池</span><b id="vBatTop">–</b></div>
+    <button id="btnMenu" aria-label="打开面板"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  </header>
+
+  <main id="stage">
+    <canvas id="pov"></canvas>
+    <div id="w3d" hidden></div>
+    <canvas class="dial" id="dThr" width="300" height="300" aria-label="转速表"></canvas>
+    <canvas class="dial" id="dG" width="216" height="216" aria-label="G 力"></canvas>
+    <div id="lights" hidden aria-live="polite"><span></span><span></span><span></span><span></span><span></span></div>
+    <div id="leds" hidden></div>
+    <div id="banner"><b>连接服务器</b><small></small></div>
+    <div id="toasts" aria-live="polite"></div>
+    <div id="camtag">陀螺仪画面</div>
+    <div id="kbHelp"><kbd>W</kbd><kbd>S</kbd> 油门/刹车 · <kbd>A</kbd><kbd>D</kbd> 转向 · <kbd>空格</kbd> 刹车<br><kbd>E</kbd> 升挡 · <kbd>Q</kbd> 降挡 · <kbd>M</kbd> 换模式 · <kbd>H</kbd> 喇叭<br><kbd>V</kbd> 换视角 · <kbd>L</kbd> 起步灯 · <kbd>R</kbd> 车回起点 · <kbd>C</kbd> 换车</div>
+  </main>
+
+  <div id="strip">
+    <div><span>电池</span><b class="n" id="sBat">–</b></div>
+    <div><span>延迟</span><b class="n" id="sLat">–</b></div>
+    <div><span>信号</span><b class="n" id="sRssi">–</b></div>
+    <div><span>倾斜</span><b class="n" id="sRoll">–</b></div>
+  </div>
+
+  <section id="deck">
+    <div class="pad" id="padL"><div class="ring" id="ringL"><i></i></div>
+      <button class="paddle" id="padDn" hidden aria-label="降挡">−</button>
+      <div id="sbtns" hidden><div class="sbtn" id="sbL" aria-label="左转">◀</div><div class="sbtn" id="sbR" aria-label="右转">▶</div></div>
+      <svg id="wheel" hidden viewBox="0 0 100 100" fill="none" stroke="#f2f0eb" stroke-width="6"><circle cx="50" cy="50" r="42"/><path d="M8 50h28M64 50h28M50 58v34" /><circle cx="50" cy="50" r="9" fill="#f2f0eb"/><path d="M50 8v8" stroke="#e8322c" stroke-width="8"/></svg>
+      <div class="hint" id="hintL">左手拖 · 转向</div></div>
+    <div id="mid">
+      <button id="btnHorn" aria-label="喇叭（按住）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"><path d="M3 10v4h4l6 4V6L7 10H3z"/><path d="M16 9.5a4 4 0 0 1 0 5M18.5 7a7.5 7.5 0 0 1 0 10"/></svg></button>
+      <div id="midRow">
+        <button class="round" id="btnLights" aria-label="起步灯倒数"><svg viewBox="0 0 24 24" fill="#e8322c"><circle cx="4" cy="12" r="3.2"/><circle cx="12" cy="12" r="3.2"/><circle cx="20" cy="12" r="3.2"/></svg>起步灯</button>
+        <button class="round" id="btnSet" aria-label="设置"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>设置</button>
+        <button class="round" id="btnCam" aria-label="换视角"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.5"/></svg><span id="camName">追尾</span></button>
+      </div>
+    </div>
+    <div class="pad" id="padR"><div class="ring" id="ringR"><i></i></div>
+      <button class="paddle" id="padUp" hidden aria-label="升挡">+</button>
+      <div class="hint" id="hintR">右手上推前进 · 下拉倒车</div></div>
+  </section>
+
+  <div id="scrim" hidden></div>
+  <aside id="side" aria-label="面板">
+    <div id="sideHead">
+      <div id="tabs" role="tablist">
+        <button role="tab" data-tab="drive">驾驶</button>
+        <button role="tab" data-tab="sound">声音</button>
+        <button role="tab" data-tab="car">车辆</button>
+        <button role="tab" data-tab="feel">手感</button>
+        <button role="tab" data-tab="log">记录</button>
+      </div>
+      <button id="sideClose" aria-label="关闭面板">×</button>
+    </div>
+    <div id="sideBody">
+      <div id="tele">
+        <div><span>电池</span><b class="n" id="vBat">–</b></div>
+        <div><span>延迟</span><b class="n" id="vLat">–</b></div>
+        <div><span>信号</span><b class="n" id="vRssi">–</b></div>
+        <div><span>遥测</span><b class="n" id="vHz">–</b></div>
+        <div><span>倾斜</span><b class="n" id="vRoll">–</b></div>
+        <div><span>俯仰</span><b class="n" id="vPitch">–</b></div>
+        <div><span>转动</span><b class="n" id="vYaw">–</b></div>
+        <div><span>板温</span><b class="n" id="vTemp">–</b></div>
+      </div>
+      <p class="note" id="latDetail" style="margin:6px 0 14px">–</p>
+
+      <!-- 驾驶 -->
+      <div class="tab" data-tab="drive">
+        <div class="box">
+          <h4>驾驶模式</h4>
+          <div class="seg" id="segMode">
+            <button data-mode="direct">直驱<small>一推就全速，漂移用</small></button>
+            <button data-mode="auto">自动挡<small>自己换挡</small></button>
+            <button data-mode="manual">手动挡<small>拨片换挡</small></button>
+          </div>
+          <p class="note" id="modeNote" style="margin-top:10px"></p>
+        </div>
+        <div class="box" id="gbBox">
+          <h4>变速箱</h4>
+          <div class="seg" id="segGn"><button data-n="4">4 挡</button><button data-n="6">6 挡</button><button data-n="8">8 挡</button></div>
+          <div class="slide"><div class="t">1 挡最高车速<b id="lGfirst"></b></div><input type="range" id="sGfirst" min="0.05" max="0.6" step="0.01"></div>
+          <div class="seg" id="segGs" style="margin-top:8px"><button data-sp="geo">真车分布<small>低挡密，高挡疏</small></button><button data-sp="lin">平均分布<small>每挡差一样多</small></button></div>
+          <div class="slide"><div class="t">加速感<b id="lGacc"></b></div><input type="range" id="sGacc" min="0.3" max="2.5" step="0.1"><small>调低 = 每个挡要拉更久才到顶（0.6× ≈ 1 挡 1 秒、最高挡 2.4 秒）</small></div>
+          <h4 style="margin:14px 0 0;font-size:14px">每个挡的最高车速（齿比）</h4>
+          <div id="gearList"></div>
+          <p class="note" style="margin-top:8px">「1 挡最高车速」和分布方式会重新排好每个挡；也可以单独拖某一个挡。<br>如果 1 挡还是很快：去「手感」把「起步力度」调到车<b>刚好能动</b>的位置。起步力度太高的话，再小的油门车都会跑得比较快。</p>
+        </div>
+        <div class="box">
+          <h4>画面</h4>
+          <div class="seg" id="segView">
+            <button data-view="3d">3D 世界<small>车在赛道上跑</small></button>
+            <button data-view="2d">地平线<small>省电，旧手机用</small></button>
+          </div>
+          <div class="seg" id="segCam" style="margin-top:8px">
+            <button data-cam="chase">追尾</button><button data-cam="pov">车内</button><button data-cam="tv">转播</button><button data-cam="top">俯视</button>
+          </div>
+          <p class="note" style="margin-top:8px">3D 世界里车身的侧倾、俯仰和转弯方向都来自真车的陀螺仪。跑了多远是按油门估算的（真车没有测速），开久了位置会偏，点「车回起点」（电脑按 R）重来。</p>
+          <div class="row" style="margin-top:8px"><button id="btnReset">车回起点</button></div>
+        </div>
+        <div class="box"><h4>转向方式</h4>
+          <select id="selSteer" style="width:100%"><option value="stick">摇杆：拖多少转多少</option><option value="buttons">按钮：点一下转一下，按住一直转</option><option value="gyro">转手机：像方向盘一样左右转手机</option></select>
+          <div id="gyroBox" hidden style="margin-top:10px">
+            <div class="box warnbox" id="gyroHttps" hidden style="background:var(--asphalt)">
+              <p style="margin:0 0 8px">手机浏览器只在安全网址（https）里才给网页用陀螺仪。点下面打开安全版本：</p>
+              <div class="row"><a id="gyroLink" class="btnlink" href="#">打开安全版本</a></div>
+              <p class="note" style="margin-top:8px">第一次会提示「连接不是私密连接 / 此连接非私人连接」：这是因为证书是你 Mac 自己做的，不是网上买的。点「高级」→「继续前往」（iPhone：「显示详细信息」→「访问此网站」）就行，只在你家 WiFi 里用。</p>
+            </div>
+            <div id="gyroCtl">
+              <p class="note" id="gyroState">–</p>
+              <div class="slide"><div class="t">转多少度打满<b id="lGyroRange"></b></div><input type="range" id="sGyroRange" min="10" max="60" step="5"></div>
+              <label class="chk"><input type="checkbox" id="cGyroInv"> 方向反了</label>
+              <div class="row" style="margin-top:10px"><button id="btnGyroOn" class="warn">开启 / 回中</button></div>
+              <p class="note" style="margin-top:8px">横着拿手机，像握方向盘。点「回中」时手机的姿势就是正中间。左手摇杆也还能用，碰它时它优先。</p>
+            </div>
+          </div>
+        </div>
+        <div class="box"><h4>油门灵敏度</h4>
+          <div class="slide" style="margin-top:0"><div class="t">油门曲线<b id="lExpo"></b></div><input type="range" id="sExpo" min="0.5" max="3" step="0.1"><small>调大 = 前半段更软，推一半油门车只走一点点，推到底还是全力</small></div>
+          <div class="slide"><div class="t">起步力度<b id="l_dmin2"></b></div><input type="range" id="s_dmin2" min="0" max="0.8" step="0.01"><small>轻推油门车就跑很快 → 调低；轻推不动 → 调高。最好的位置：车<b>刚好能动</b></small></div>
+          <canvas id="cvCurve" width="560" height="200" style="width:100%;height:100px;margin-top:10px;background:var(--asphalt);border-radius:8px"></canvas>
+          <p class="note" style="margin-top:6px">图：横轴 = 你推多少，竖轴 = 电机真正拿到多少力。虚线 = 起步力度（电机最少给这么多，不然车不动）。</p>
+        </div>
+        <div class="box"><h4>键盘油门（电脑）</h4>
+          <div class="slide" style="margin-top:0"><div class="t">按住 W 加到<b id="lKb"></b></div><input type="range" id="sKb" min="0.2" max="1" step="0.05"></div>
+          <p class="note" style="margin-top:6px">按住 W 会慢慢加到这个力度，同时按住 Shift 就是全力。S 同理是刹车 / 倒车。</p></div>
+        <div class="box"><h4>名字</h4><input type="text" id="inName" maxlength="20"></div>
+        <div class="box"><h4>操作方式</h4>
+          <p class="note">手机：左手转向，右手油门，中间黄色是喇叭。手动挡时左拨片「−」降挡，右拨片「+」升挡。<br>键盘：W/S 油门刹车，A/D 转向，E 升挡，Q 降挡，M 换模式，V 换视角，H 喇叭，L 起步灯，R 车回起点，C 换车。<br>手柄：左摇杆转向，RT 油门，LT 刹车/倒车，RB 升挡，LB 降挡，A 喇叭，Y 换视角。</p></div>
+      </div>
+
+      <!-- 声音 -->
+      <div class="tab" data-tab="sound">
+        <div class="box">
+          <h4>手机上的声音</h4>
+          <div class="seg" id="segEng">
+            <button data-eng="v12">V12 发动机</button><button data-eng="off">不要发动机声</button>
+          </div>
+          <div class="slide"><div class="t">音量<b id="lPvol"></b></div><input type="range" id="sPvol" min="0" max="1" step="0.05"></div>
+          <label class="chk"><input type="checkbox" id="cPop"> 收油、降挡时排气管放炮</label>
+          <label class="chk"><input type="checkbox" id="cTyre"> 漂移时轮胎尖叫</label>
+          <label class="chk"><input type="checkbox" id="cRevBeep"> 倒车嘀嘀</label>
+          <div class="row" style="margin-top:10px"><button id="btnRev">轰一下油门</button></div>
+          <p class="note" style="margin-top:8px">iPhone 侧面的静音键打开时网页没声音，要拨回来。</p>
+        </div>
+        <div class="box">
+          <div class="row" style="margin-bottom:8px"><h4 style="margin:0;flex:1">音乐（手机上放）</h4>
+            <label class="chk" style="font-size:13px;margin:0"><input type="checkbox" id="cLoop"> 循环</label>
+            <button id="btnMStop" class="stop" style="flex:none">停</button></div>
+          <div id="songs"></div>
+          <p class="note" id="nowPlay" style="margin-top:8px"></p>
+          <div class="row" style="margin-top:10px"><label class="btnlink" style="cursor:pointer;background:var(--chalk)">放手机/电脑里的歌<input type="file" id="fSong" accept="audio/*" hidden></label></div>
+          <p class="note" style="margin-top:6px">选一首你手机或电脑里的 MP3 / M4A，直接在这个页面放，跟发动机声一起出来。</p>
+          <details style="margin-top:8px"><summary class="note" style="cursor:pointer">放自己的曲子（RTTTL 铃声格式）</summary>
+            <textarea id="taRtttl" placeholder="名字:d=4,o=5,b=120:c,e,g,2c6" style="margin-top:8px"></textarea>
+            <div class="row" style="margin-top:8px"><button id="btnRtttl">播放</button></div>
+          </details>
+        </div>
+        <details class="box"><summary style="cursor:pointer;font-weight:600">车上的蜂鸣器（默认关）</summary>
+          <p class="note" style="margin-top:8px">声音现在都在手机上放。车上接了蜂鸣器、又想让车自己也响，才打开这里。</p>
+          <div class="row" style="margin-top:10px">
+            <select id="selBz" style="flex:1"><option value="0">关</option><option value="1">无源蜂鸣器</option><option value="2">有源蜂鸣器</option></select>
+          </div>
+          <div class="slide"><div class="t">音量<b id="l_bvol"></b></div><input type="range" id="s_bvol" min="0.05" max="1" step="0.05"></div>
+          <label class="chk"><input type="checkbox" id="cRvb"> 车上倒车嘀嘀</label>
+          <label class="chk"><input type="checkbox" id="cBzlo"> 低电平触发</label>
+          <label class="chk"><input type="checkbox" id="cCarMusic"> 音乐也在车上放</label>
+          <div class="row" style="margin-top:10px"><button id="btnBzTest">车上试一下</button></div>
+        </details>
+      </div>
+
+      <!-- 车辆 -->
+      <div class="tab" data-tab="car">
+        <div class="box">
+          <h4>陀螺仪水平校准</h4>
+          <p class="note">把车放在平地上，别碰它，点「设为水平」。车现在的姿态会被当成水平，陀螺仪的偏差和装歪的角度都会扣掉。</p>
+          <p id="calState" style="margin:8px 0">–</p>
+          <div class="row"><button id="btnCal" class="warn">设为水平</button><button id="btnCalClr" style="flex:none">清除</button></div>
+        </div>
+        <div class="box">
+          <h4>自检</h4>
+          <p class="note">车会依次：读陀螺仪、左转、右转、回正、前进、后退、刹车。<b>先把车架空</b>，轮子离地。</p>
+          <ol id="stList" style="margin-top:8px"></ol>
+          <p id="stNow" style="margin:6px 0;font-weight:600"></p>
+          <div class="row"><button id="btnSt">开始自检</button><button id="stStop" class="stop" hidden>停止</button></div>
+        </div>
+        <div class="box">
+          <h4>固件</h4>
+          <p class="note" id="pFw">–</p>
+          <div class="row" style="margin-top:8px"><button id="btnOta">升级固件</button></div>
+        </div>
+        <p class="note" id="pInfo"></p>
+      </div>
+
+      <!-- 手感 -->
+      <div class="tab" data-tab="feel">
+        <p class="note">只有正在开这台车的人能改，拖完立即生效。</p>
+        <div class="box"><h4>方向</h4>
+          <label class="chk"><input type="checkbox" id="cDinv"> 前后反了</label>
+          <label class="chk"><input type="checkbox" id="cSinv"> 左右反了</label></div>
+        <div class="box" id="feelDrive"><h4>油门</h4></div>
+        <div class="box" id="feelSteer"><h4>转向</h4>
+          <div class="seg" id="segSmode"><button data-sm="0">打到底<small>原来的</small></button><button data-sm="1">比例<small>歪一点转一点</small></button><button data-sm="2">舵机<small>要换舵机</small></button></div>
+          <p class="note" id="smodeNote" style="margin-top:8px"></p>
+        </div>
+        <div class="box" id="feelBatt"><h4>电池保护（接了电压检测才有用）</h4></div>
+      </div>
+
+      <!-- 记录 -->
+      <div class="tab" data-tab="log">
+        <p class="note">每次断线、刹停、重启都会记下原因。完整记录在 Mac 的 rccar/logs 文件夹。<span id="dCount"></span></p>
+        <div id="diagList"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const S = { diag:[], ws:null, you:null, name:'', cars:[], car:null, tel:{}, rtt1:null,
+  thIn:0, th:0, st:0, hn:0, src:'触摸', hz:0, telCount:0, lastTelAt:0, songs:[], calMsg:null };
+const store = { get(k,d){ try{ const v = localStorage.getItem(k); return v==null ? d : v; }catch{ return d; } }, set(k,v){ try{ localStorage.setItem(k,v); }catch{} } };
+S.name = store.get('rc-name','') || '车手' + Math.floor(Math.random()*90+10);
+$('inName').value = S.name;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const world = { ok:false, loading:false };
+
+// ================= 布局：电脑 / 手机横屏 / 手机竖屏 =================
+const coarse = matchMedia('(pointer:coarse)').matches;
+function layout(){
+  const w = innerWidth, h = innerHeight;
+  const mode = w >= 1000 && h >= 600 ? 'desk' : w > h ? 'land' : 'port';
+  const b = document.body;
+  b.classList.remove('desk','land','port'); b.classList.add(mode);
+  b.classList.toggle('nocoarse', !coarse);
+  if (mode === 'desk') closeSheet();
+  if (world.resize) world.resize();
+}
+function openSheet(tab){ if (tab) selTab(tab); if (!document.body.classList.contains('desk')) { document.body.classList.add('sheet'); $('scrim').hidden = false; } }
+function closeSheet(){ document.body.classList.remove('sheet'); $('scrim').hidden = true; }
+$('btnMenu').onclick = () => document.body.classList.contains('sheet') ? closeSheet() : openSheet();
+$('sideClose').onclick = closeSheet; $('scrim').onclick = closeSheet;
+$('btnSet').onclick = () => openSheet();
+function selTab(t){
+  store.set('rc-tab', t);
+  for (const b of document.querySelectorAll('#tabs button')) b.setAttribute('aria-selected', b.dataset.tab === t);
+  for (const d of document.querySelectorAll('.tab')) d.hidden = d.dataset.tab !== t;
+}
+for (const b of document.querySelectorAll('#tabs button')) b.onclick = () => selTab(b.dataset.tab);
+selTab(store.get('rc-tab','drive'));
+const segSet = (id, attr, val) => { for (const b of document.querySelectorAll(`#${id} button`)) b.setAttribute('aria-pressed', b.dataset[attr] === val); };
+
+// ================= 变速箱 + 发动机模拟 =================
+// 真车只有一个电机，没有挡位。自动/手动挡是在手机上模拟一台 V12：
+// 油门推的是"发动机"，挡位决定能跑多快、加速多猛，算出来的车速才发给车。
+// 直驱 = 原来的方式，推多少给多少（漂移用）。
+const IDLE = 1100, RED = 8800, LIMIT = 9200;
+// top = 这个挡最快能到真车全速的多少；acc = 加速有多猛（低挡猛、跑不快；高挡慢慢拉、能到全速）
+// 变速箱可以调：4 / 6 / 8 挡，每个挡最高车速（= 齿比）都能改。加速度按齿比算：挡越低越猛
+let GB = { n: 4, first: .15, spread: 'geo', accel: .6, tops: null };
+try { Object.assign(GB, JSON.parse(store.get('rc-gb', '{}'))); } catch {}
+let GEARS = {};
+function autoTops(){
+  const t = [];
+  for (let i = 0; i < GB.n; i++) { const x = GB.n === 1 ? 1 : i / (GB.n - 1); t.push(+(GB.spread === 'geo' ? GB.first * Math.pow(1 / GB.first, x) : GB.first + (1 - GB.first) * x).toFixed(3)); }
+  return t;
+}
+function buildGears(){
+  if (!Array.isArray(GB.tops) || GB.tops.length !== GB.n) GB.tops = autoTops();
+  // 每个挡都要"拉"一段时间才到顶（低挡短、高挡长），这样换挡才有感觉。加速感 = 整体快慢
+  const T = 1.2 / GB.accel, drag = v => .02 + .06 * v * v;
+  GEARS = { '-1': { top: .35, acc: (.35 / (T * .7) + drag(.35)) / .9 } };
+  GB.tops.forEach((top, i) => {
+    const prev = i ? GB.tops[i - 1] : 0, time = T * (.5 + .7 * top);
+    GEARS[i + 1] = { top, acc: ((top - prev) / time + drag(top)) / .9 };
+  });
+  store.set('rc-gb', JSON.stringify(GB));
+}
+buildGears();
+const drive = {
+  mode: store.get('rc-mode','direct'), g: 1, v: 0, rpm: IDLE, load: 0, limiter: false, clutch: 0, revHold: 0, lastShift: 0, gas: 0, brake: 0,
+  label(){ return this.g === -1 ? 'R' : this.g === 0 ? 'N' : String(this.g); },
+  setMode(m){
+    this.mode = m; store.set('rc-mode', m);
+    this.g = 1; this.v = 0; this.rpm = IDLE;
+    renderMode(); audio.click();
+  },
+  shift(d){
+    if (this.mode === 'direct') return;
+    const from = this.g, to = clamp(from + d, -1, GB.n);
+    if (to === from) return;
+    if (to === -1 && Math.abs(this.v) > .05) { toast({type:'error', msg:'先停车才能挂倒挡'}); audio.deny(); return; }
+    if (from === -1 && Math.abs(this.v) > .05) { toast({type:'error', msg:'先停车'}); audio.deny(); return; }
+    if (to > 0 && d < 0 && GEARS[to] && this.v / GEARS[to].top > 1.08) { toast({type:'error', msg:'转速太高，降不了这个挡'}); audio.deny(); return; }
+    this.g = to; this.clutch = .11; this.lastShift = performance.now();
+    if (d < 0 && to > 0 && this.rpm > 3000) audio.downshift(); else audio.click();
+    flashGear();
+  },
+  // 每帧调用：dt 秒；thIn = 摇杆 -1..1。返回要发给车的油门
+  step(dt, thIn){
+    if (this.mode === 'direct') {
+      this.v = thIn; this.load = Math.abs(thIn); this.limiter = false;
+      // 发动机有惯性：转速匀速往上爬（每秒 4500 转），不会一下冲到顶
+      const tgt = IDLE + Math.abs(thIn) * (RED - IDLE), rate = tgt > this.rpm ? 4500 : 6500;
+      this.rpm += clamp(tgt - this.rpm, -rate * dt, rate * dt);
+      return thIn;
+    }
+    const auto = this.mode === 'auto';
+    let gas = Math.max(0, thIn), brake = Math.max(0, -thIn);
+    // 自动挡：停住以后往下拉 = 倒车，往上推 = 前进（和普通遥控车一样）
+    if (auto) {
+      if (this.g === -1) { [gas, brake] = [brake, gas]; if (thIn > .3 && Math.abs(this.v) < .04) this.g = 1; }
+      else if (brake > .3 && Math.abs(this.v) < .03) { this.revHold += dt; if (this.revHold > .25) { this.g = -1; this.revHold = 0; } }
+      else this.revHold = 0;
+      if (this.g === 0) this.g = 1;
+    }
+    this.gas = gas; this.brake = brake;
+    if (this.clutch > 0) this.clutch -= dt;
+    if (this.g > GB.n) this.g = GB.n;
+    const G = GEARS[this.g] || GEARS[1], dir = this.g === -1 ? -1 : 1;
+    let target;
+    if (this.g === 0) {                      // 空挡：车滑行，发动机随便轰
+      this.v -= Math.sign(this.v) * Math.min(Math.abs(this.v), (.12 + brake * 2.6) * dt);
+      target = IDLE + gas * (LIMIT - IDLE);
+      this.limiter = gas > .95;
+    } else {
+      const sp = this.v * dir;                         // 这个挡位方向上的速度
+      const r = Math.max(0, sp) / G.top;               // 0..1 = 这个挡的转速比例
+      const rpmGear = IDLE + r * (RED - IDLE);
+      const slip = IDLE + gas * 2400 * Math.max(0, 1 - r / .3);    // 起步时离合半联动：低速也能把转速拉高一点
+      target = Math.max(rpmGear, slip);
+      this.limiter = r >= .995 && gas > .1;
+      const tq = .95 + .08 * Math.sin(Math.PI * clamp((this.rpm - IDLE) / (RED - IDLE), 0, 1));  // 扭力几乎平的 → 转速线性上升
+      // 油门是渐进的：轻推 = 小力，推到底才是全力
+      const g15 = Math.pow(gas, 1.6);
+      let a = 0;
+      if (this.clutch <= 0 && !this.limiter) a += g15 * G.acc * tq;
+      a -= .02 + .06 * sp * sp;                                    // 风阻
+      if (gas < .05) a -= .4 + .5 * G.acc * r;                     // 收油：小车阻力大 + 发动机制动，松手很快就停
+      let nsp = sp + a * dt;
+      if (brake > 0) nsp -= brake * 2.8 * dt;
+      if (gas < .05 && nsp < .035) nsp = 0;                        // 很慢的时候直接停（不然电机起步力度会让车一直慢慢爬）
+      this.v = clamp(nsp, 0, G.top) * dir;
+      // 自动换挡
+      if (auto && this.g > 0 && this.clutch <= 0 && performance.now() - this.lastShift > 450) {
+        if (r > .94 && gas > .2 && this.g < GB.n) this.shift(1);
+        else if (this.g > 1 && (r < .32 || (gas > .9 && sp / GEARS[this.g - 1].top < .8 && r < .6))) this.shift(-1);
+      }
+    }
+    // 转速匀速跟随：上升最快每秒 9000 转（挡位里本来就跟车速线性），换挡掉转速每秒 16000 转（听得到"降一下"）
+    const rate = target > this.rpm ? 9000 : 16000;
+    this.rpm = clamp(this.rpm + clamp(target - this.rpm, -rate * dt, rate * dt), IDLE * .9, LIMIT);
+    const prevLoad = this.load;
+    this.load = this.clutch > 0 ? 0 : gas;
+    if (prevLoad > .6 && this.load < .05 && this.rpm > 5200) audio.overrun();
+    // 发给车：车的固件会把油门平方（x² 曲线），这里先开方，让车速和模拟车速成正比
+    if (Math.abs(this.v) < .03) return 0;
+    return Math.sign(this.v) * Math.sqrt(Math.abs(this.v));
+  },
+};
+function renderMode(){
+  const m = drive.mode;
+  $('btnMode').textContent = m === 'direct' ? '直驱' : (m === 'auto' ? '自动 ' : '手动 ') + drive.label();
+  segSet('segMode', 'mode', m);
+  $('padDn').hidden = $('padUp').hidden = m !== 'manual';
+  $('leds').hidden = m === 'direct';
+  $('gbBox').hidden = m === 'direct';
+  $('hintR').textContent = m === 'direct' ? '右手上推前进 · 下拉倒车' : m === 'auto' ? '上推油门 · 下拉刹车，停住再拉 = 倒车' : '上推油门 · 下拉刹车';
+  $('modeNote').textContent = m === 'direct' ? '油门直接给电机，反应最快，猛推猛拉能漂移。' :
+    m === 'auto' ? `模拟 ${GB.n} 挡自动变速箱：起步猛，越跑越快，到转速自己升挡。停住以后往下拉就是倒车。` :
+    `模拟 ${GB.n} 挡手动：R · N · 1–${GB.n}。低挡起步猛但跑不快，最高挡才是全速。换挡灯全变蓝就该按「+」升挡；转速太高不让降挡。1 挡再降是空挡，停住再降是倒挡。`;
+}
+for (const b of document.querySelectorAll('#segMode button')) b.onclick = () => drive.setMode(b.dataset.mode);
+function renderGearbox(){
+  segSet('segGn', 'n', String(GB.n)); segSet('segGs', 'sp', GB.spread);
+  $('sGfirst').value = GB.first; $('lGfirst').textContent = Math.round(GB.first * 100) + '%';
+  $('sGacc').value = GB.accel; $('lGacc').textContent = GB.accel.toFixed(1) + '×';
+  const list = $('gearList'); list.innerHTML = '';
+  GB.tops.forEach((top, i) => {
+    const d = document.createElement('div'); d.className = 'slide';
+    d.innerHTML = `<div class="t"><span>${i + 1} 挡</span><b>${Math.round(top * 100)}%</b></div><input type="range" min="0.03" max="1" step="0.01" value="${top}">`;
+    const inp = d.querySelector('input'), lab = d.querySelector('b');
+    inp.oninput = () => {
+      const lo = i ? GB.tops[i - 1] + .01 : .03, hi = i < GB.n - 1 ? GB.tops[i + 1] - .01 : 1;
+      const v = clamp(+inp.value, lo, hi); inp.value = v; GB.tops[i] = +v.toFixed(2); lab.textContent = Math.round(v * 100) + '%';
+      if (i === 0) { GB.first = GB.tops[0]; $('sGfirst').value = GB.first; $('lGfirst').textContent = Math.round(GB.first * 100) + '%'; }
+      buildGears();
+    };
+    list.appendChild(d);
+  });
+}
+const regear = () => { GB.tops = autoTops(); buildGears(); renderGearbox(); renderMode(); if (drive.g > GB.n) drive.g = GB.n; };
+for (const b of document.querySelectorAll('#segGn button')) b.onclick = () => { GB.n = +b.dataset.n; regear(); };
+for (const b of document.querySelectorAll('#segGs button')) b.onclick = () => { GB.spread = b.dataset.sp; regear(); };
+$('sGfirst').oninput = e => { GB.first = +e.target.value; regear(); };
+$('sGacc').oninput = e => { GB.accel = +e.target.value; buildGears(); $('lGacc').textContent = GB.accel.toFixed(1) + '×'; };
+renderGearbox();
+$('btnMode').onclick = () => drive.setMode({direct:'auto', auto:'manual', manual:'direct'}[drive.mode]);
+for (let i = 0; i < 12; i++) $('leds').appendChild(document.createElement('i'));
+let gearFlashAt = 0; const flashGear = () => { gearFlashAt = performance.now(); renderMode(); };
+
+// 轰油门演示 / 接手时点火：只改声音和表，不动车
+let demo = null;
+function demoRpm(now){
+  if (!demo) return null;
+  const t = (now - demo.at) / 1000;
+  if (t > 1.8) { demo = null; return null; }
+  if (t < demo.up) return { rpm: IDLE + (demo.peak - IDLE) * (t / demo.up), load: 1 };
+  if (!demo.popped) { demo.popped = true; if (demo.peak > 6000) audio.overrun(); }
+  return { rpm: IDLE + (demo.peak - IDLE) * Math.exp(-(t - demo.up) * 3.2), load: 0 };
+}
+
+// ================= 声音（全部在手机上合成，不用下载文件） =================
+const audio = (() => {
+  let ac = null, master, noiseBuf, eng = null, horn = null, screech = null, musicTimer = null, musicNodes = [];
+  const cfg = { eng: store.get('rc-eng2','v12'), vol: +store.get('rc-pvol','0.7'), pop: store.get('rc-pop','1') === '1', tyre: store.get('rc-tyre','1') === '1', revBeep: store.get('rc-revbeep','1') === '1' };
+  function init(){
+    if (ac) return true;
+    try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch { return false; }
+    const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ac.destination);
+    master = ac.createGain(); master.gain.value = cfg.vol; master.connect(comp);
+    noiseBuf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+    const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    return true;
+  }
+  const noise = () => { const n = ac.createBufferSource(); n.buffer = noiseBuf; n.loop = true; return n; };
+  // V12：曲轴每转一圈点火 6 次。基频用"半阶"（rpm/120），点火频率是第 12 次谐波。
+  // 两排缸的排气稍微错开一点，听起来更厚；进气单独一层高频，踩油门时才出来。
+  function wave(spec, n = 64){
+    const re = new Float32Array(n + 1), im = new Float32Array(n + 1);
+    for (let h = 1; h <= n; h++) im[h] = (spec[h] || 0) + .012 / Math.sqrt(h);
+    return ac.createPeriodicWave(re, im);
+  }
+  function buildEngine(){
+    const bus = ac.createGain(); bus.gain.value = 0; bus.connect(master);
+    const lim = ac.createGain(); lim.connect(bus);
+    const exWave = wave({3:.10, 6:.42, 9:.14, 12:1, 15:.12, 18:.38, 24:.6, 30:.18, 36:.32, 42:.08, 48:.16, 60:.05});
+    const exA = ac.createOscillator(), exB = ac.createOscillator(); exA.setPeriodicWave(exWave); exB.setPeriodicWave(exWave); exB.detune.value = 9;
+    const shaper = ac.createWaveShaper(); const curve = new Float32Array(1024);
+    for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; curve[i] = Math.tanh(2.2 * x); } shaper.curve = curve;
+    const exPre = ac.createGain(); exPre.gain.value = .55;
+    const exLP = ac.createBiquadFilter(); exLP.type = 'lowpass'; exLP.Q.value = .9;
+    const exG = ac.createGain();
+    exA.connect(exPre); exB.connect(exPre); exPre.connect(shaper); shaper.connect(exLP); exLP.connect(exG); exG.connect(lim);
+    const inO = ac.createOscillator(); inO.setPeriodicWave(wave({12:.25, 24:.5, 36:.9, 48:.6, 60:.35}));
+    const inBP = ac.createBiquadFilter(); inBP.type = 'bandpass'; inBP.Q.value = 1.1;
+    const inG = ac.createGain(); inO.connect(inBP); inBP.connect(inG); inG.connect(lim);
+    const nz = noise(), nzBP = ac.createBiquadFilter(); nzBP.type = 'bandpass'; nzBP.frequency.value = 2600; nzBP.Q.value = .7;
+    const nzG = ac.createGain(); nzG.gain.value = 0; nz.connect(nzBP); nzBP.connect(nzG); nzG.connect(lim);
+    const sub = ac.createOscillator(); const subG = ac.createGain(); sub.connect(subG); subG.connect(lim);
+    for (const o of [exA, exB, inO, sub]) o.start(); nz.start();
+    return { bus, lim, exA, exB, exG, exLP, inO, inBP, inG, nzG, sub, subG };
+  }
+  function pop(at, big){
+    const t = ac.currentTime + at;
+    const n = ac.createBufferSource(); n.buffer = noiseBuf;
+    const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = big ? 900 : 1600 + Math.random() * 1200;
+    const g = ac.createGain(); g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(big ? .9 : .55, t + .003); g.gain.exponentialRampToValueAtTime(.001, t + (big ? .09 : .04 + Math.random() * .03));
+    n.connect(lp); lp.connect(g); g.connect(master); n.start(t, Math.random()); n.stop(t + .15);
+    const o = ac.createOscillator(); o.frequency.setValueAtTime(big ? 90 : 140, t); o.frequency.exponentialRampToValueAtTime(40, t + .06);
+    const og = ac.createGain(); og.gain.setValueAtTime(big ? .6 : .3, t); og.gain.exponentialRampToValueAtTime(.001, t + .07);
+    o.connect(og); og.connect(master); o.start(t); o.stop(t + .08);
+  }
+  function tone(f, ms, type = 'sine', vol = .25, at = 0){
+    if (!ac) return;
+    const t = ac.currentTime + at, o = ac.createOscillator(), g = ac.createGain();
+    o.type = type; o.frequency.value = f;
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .008); g.gain.setValueAtTime(vol, t + ms / 1000 - .02); g.gain.linearRampToValueAtTime(0, t + ms / 1000);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + ms / 1000 + .02);
+  }
+  let revBeepAt = 0;
+  return {
+    cfg,
+    unlock(){ if (init() && ac.state === 'suspended') ac.resume(); },
+    setVol(v){ cfg.vol = v; if (master) master.gain.setTargetAtTime(v, ac.currentTime, .05); },
+    engine(rpm, load, limiter, on){
+      if (!ac) return;
+      const want = on && cfg.eng === 'v12';
+      if (want && !eng) eng = buildEngine();
+      if (!eng) return;
+      const t = ac.currentTime, f = rpm / 120, x = clamp((rpm - IDLE) / (RED - IDLE), 0, 1);
+      eng.bus.gain.setTargetAtTime(want ? .5 : 0, t, .15);
+      for (const o of [eng.exA, eng.exB, eng.inO]) o.frequency.setTargetAtTime(f, t, .012);
+      eng.sub.frequency.setTargetAtTime(rpm / 60 * 1.5, t, .02);
+      eng.subG.gain.setTargetAtTime(.18 * (1 - x), t, .05);
+      eng.exLP.frequency.setTargetAtTime(380 + rpm * .32 + load * 2600, t, .04);
+      eng.exG.gain.setTargetAtTime(.28 + load * .4 + x * .1, t, .04);
+      eng.inBP.frequency.setTargetAtTime(900 + rpm * .35, t, .04);
+      eng.inG.gain.setTargetAtTime((.02 + load * .3) * (.25 + x), t, .04);
+      eng.nzG.gain.setTargetAtTime(load * .05 * (.3 + x), t, .05);
+      eng.lim.gain.setTargetAtTime(limiter && (t * 15) % 1 < .45 ? .25 : 1, t, .004);   // 断油器：转速顶住时每秒断 15 次
+    },
+    overrun(){ if (!ac || !cfg.pop || cfg.eng === 'off') return; const n = 3 + Math.floor(Math.random() * 5); for (let i = 0; i < n; i++) pop(.05 + Math.random() * .7, i === 0 && Math.random() < .4); },
+    downshift(){ if (!ac) return; this.click(); if (cfg.pop && cfg.eng !== 'off') { pop(.06, true); pop(.16); if (Math.random() < .6) pop(.28); } },
+    click(){ if (!ac) return; const t = ac.currentTime, n = ac.createBufferSource(); n.buffer = noiseBuf; const bp = ac.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 3500; bp.Q.value = 2; const g = ac.createGain(); g.gain.setValueAtTime(.35, t); g.gain.exponentialRampToValueAtTime(.001, t + .03); n.connect(bp); bp.connect(g); g.connect(master); n.start(t); n.stop(t + .05); },
+    deny(){ tone(220, 90, 'square', .12); tone(180, 120, 'square', .12, .1); },
+    // 汽车喇叭：两个音（F 和 A），锯齿波过滤波器，带一点真喇叭的"沙"
+    horn(on){
+      if (!ac) return;
+      if (on && !horn) {
+        const g = ac.createGain(), lp = ac.createBiquadFilter(), pk = ac.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 2600; pk.type = 'peaking'; pk.frequency.value = 1400; pk.gain.value = 6; pk.Q.value = 1.5;
+        g.gain.setValueAtTime(0, ac.currentTime); g.gain.linearRampToValueAtTime(.22, ac.currentTime + .015);
+        const os = [349, 440, 351.5].map(f => { const o = ac.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(); return o; });
+        lp.connect(pk); pk.connect(g); g.connect(master); horn = { g, os };
+      } else if (!on && horn) { const h = horn; horn = null; h.g.gain.setTargetAtTime(0, ac.currentTime, .02); setTimeout(() => h.os.forEach(o => o.stop()), 150); }
+    },
+    tyre(slip){
+      if (!ac) return;
+      const want = cfg.tyre && slip > .05;
+      if (want && !screech) {
+        const n = noise(), bp = ac.createBiquadFilter(), bp2 = ac.createBiquadFilter(), g = ac.createGain();
+        bp.type = 'bandpass'; bp.frequency.value = 1350; bp.Q.value = 9; bp2.type = 'bandpass'; bp2.frequency.value = 2100; bp2.Q.value = 7;
+        g.gain.value = 0; n.connect(bp); n.connect(bp2); bp.connect(g); bp2.connect(g); g.connect(master); n.start(); screech = { g, bp };
+      }
+      if (!screech) return;
+      const t = ac.currentTime;
+      screech.g.gain.setTargetAtTime(want ? Math.min(1, slip) * 1.6 : 0, t, want ? .06 : .15);
+      screech.bp.frequency.setTargetAtTime(1200 + slip * 400 + Math.random() * 120, t, .05);
+    },
+    reverse(on){
+      if (!ac || !cfg.revBeep || !on) return;
+      const t = performance.now(); if (t - revBeepAt > 700) { revBeepAt = t; tone(1050, 340, 'sine', .14); }
+    },
+    beep(f, ms){ tone(f, ms, 'sine', .3); },
+    impact(){ if (!ac) return; pop(0, true); tone(70, 160, 'sine', .4); },
+    // 音乐：三角波 + 一点正弦泛音 + 包络，比蜂鸣器好听很多
+    play(r, loop, onEnd){
+      this.stopMusic(); if (!ac) return false;
+      const notes = parseRtttl(r); if (!notes.length) return false;
+      const bus = ac.createGain(); bus.gain.value = .5; bus.connect(master);
+      const lp = ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 3200; lp.connect(bus);
+      let t = ac.currentTime + .05;
+      for (const n of notes) {
+        const d = n.ms / 1000;
+        if (n.f) for (const [type, mul, vol] of [['triangle', 1, .42], ['sine', 2, .1], ['square', 1, .035]]) {
+          const o = ac.createOscillator(), g = ac.createGain(); o.type = type; o.frequency.value = n.f * mul;
+          g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .01); g.gain.exponentialRampToValueAtTime(vol * .35, t + Math.max(.03, d * .7)); g.gain.linearRampToValueAtTime(0, t + d * .95);
+          o.connect(g); g.connect(lp); o.start(t); o.stop(t + d); musicNodes.push(o);
+        }
+        t += d;
+      }
+      const total = notes.reduce((a, n) => a + n.ms, 0);
+      musicTimer = setTimeout(() => { musicNodes = []; if (loop) this.play(r, loop, onEnd); else if (onEnd) onEnd(); }, total + 80);
+      return true;
+    },
+    stopMusic(){ clearTimeout(musicTimer); for (const n of musicNodes) { try { n.stop(); } catch {} } musicNodes = []; if (this.fileEl) { this.fileEl.pause(); } },
+    // 放本地音乐文件：接到同一个音量上
+    playFile(file, loop, onEnd){
+      this.stopMusic(); if (!ac) return false;
+      if (!this.fileEl) { this.fileEl = new Audio(); this.fileEl.crossOrigin = 'anonymous'; ac.createMediaElementSource(this.fileEl).connect(master); }
+      if (this.fileUrl) URL.revokeObjectURL(this.fileUrl);
+      this.fileUrl = URL.createObjectURL(file);
+      this.fileEl.src = this.fileUrl; this.fileEl.loop = !!loop; this.fileEl.onended = () => onEnd && onEnd();
+      this.fileEl.play().catch(() => {});
+      return true;
+    },
+  };
+})();
+function parseRtttl(s){
+  const parts = String(s).split(':'); if (parts.length < 3) return [];
+  let d = 4, o = 5, b = 120;
+  for (const kv of parts[1].split(',')) { const [k, v] = kv.trim().split('='); if (k === 'd') d = +v || d; if (k === 'o') o = +v || o; if (k === 'b') b = +v || b; }
+  const whole = 240000 / b, base = { c:0, d:2, e:4, f:5, g:7, a:9, b:11 }, out = [];
+  for (let tok of parts.slice(2).join(':').split(',')) {
+    tok = tok.trim().toLowerCase(); const m = tok.match(/^(\d+)?([a-gp])(#)?(\.)?(\d)?(\.)?$/); if (!m) continue;
+    let ms = whole / (+m[1] || d); if (m[4] || m[6]) ms *= 1.5;
+    const f = m[2] === 'p' ? 0 : 440 * Math.pow(2, ((m[5] ? +m[5] : o) * 12 + base[m[2]] + (m[3] ? 1 : 0) - 57) / 12);
+    out.push({ f, ms });
+  }
+  return out;
+}
+function audioUnlock(){ audio.unlock(); }
+addEventListener('pointerdown', audioUnlock, {once:true}); addEventListener('keydown', audioUnlock, {once:true});
+segSet('segEng', 'eng', audio.cfg.eng);
+for (const b of document.querySelectorAll('#segEng button')) b.onclick = () => { audio.cfg.eng = b.dataset.eng; store.set('rc-eng2', b.dataset.eng); segSet('segEng', 'eng', b.dataset.eng); audioUnlock(); };
+$('sPvol').value = audio.cfg.vol; $('lPvol').textContent = Math.round(audio.cfg.vol * 100) + '%';
+$('sPvol').oninput = e => { audio.setVol(+e.target.value); $('lPvol').textContent = Math.round(e.target.value * 100) + '%'; store.set('rc-pvol', e.target.value); };
+for (const [id, key, sk] of [['cPop','pop','rc-pop'], ['cTyre','tyre','rc-tyre'], ['cRevBeep','revBeep','rc-revbeep']]) {
+  $(id).checked = audio.cfg[key]; $(id).onchange = e => { audio.cfg[key] = e.target.checked; store.set(sk, e.target.checked ? '1' : '0'); };
+}
+$('btnRev').onclick = () => { audioUnlock(); demo = { at: performance.now(), peak: 8600, up: .3 }; };
+
+// ================= 网络 =================
+function connect(){
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ui`);
+  S.ws = ws;
+  ws.onopen = () => ws.send(JSON.stringify({t:'hello', name:S.name}));
+  ws.onclose = () => setTimeout(connect, 1000);
+  ws.onmessage = e => { const m = JSON.parse(e.data); if (handle[m.t]) handle[m.t](m); };
+}
+const sendWs = o => { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); };
+const handle = {
+  welcome: m => { S.you = m.you; S.songs = m.songs || []; S.httpsPort = m.httpsPort; renderSongs(); gyro.render(); },
+  pong: m => { S.rtt1 = Math.round(performance.now() - m.ts); },
+  state: m => { S.cars = m.cars; renderCars(); },
+  tel: m => { S.tel[m.car] = m; if (m.car === S.car) { S.telCount++; S.lastTelAt = performance.now(); } },
+  evt: m => { toast(m); if (m.car === S.car && m.type === 'impact') { audio.impact(); if (world.shake) world.shake(); } },
+  error: m => toast({type:'error', msg:m.msg}),
+  selftest: m => onSelftest(m),
+  ota: m => { if (m.car !== S.car) return; toast({type: m.state === 'fail' ? 'ota_fail' : 'ota', msg: m.state === 'start' ? '车开始下载固件，大约 20 秒' : (m.err || '')}); },
+  diag: m => { S.diag.unshift(m); if (S.diag.length > 40) S.diag.pop(); renderDiag(); },
+  calib: m => { if (m.car !== S.car) return; S.calMsg = m; renderCal(); if (m.phase !== 'run') toast({type: m.ok ? 'calib' : 'error', msg: m.msg}); },
+  count: m => { if (m.car === S.car) startLights(); },
+};
+setInterval(() => sendWs({t:'ping', ts:performance.now()}), 1000);
+setInterval(() => { S.hz = S.telCount; S.telCount = 0; }, 1000);
+
+// 输入一变就立刻发（最快 15ms 一次），另外 30 Hz 持续发当心跳
+let lastSent = {th:0, st:0, hn:0, at:0};
+function pushInput(force){
+  const c = myCar(); if (!c || c.driver !== S.you) return;
+  const t = performance.now();
+  const changed = Math.abs(S.th - lastSent.th) > .03 || Math.abs(S.st - lastSent.st) > .04 || (S.st === 0) !== (lastSent.st === 0) || (S.th === 0) !== (lastSent.th === 0) || S.hn !== lastSent.hn;
+  if (!force && (!changed || t - lastSent.at < 15)) return;
+  sendWs({t:'input', th:+S.th.toFixed(3), st:+S.st.toFixed(3), hn:S.hn, g: drive.mode === 'direct' ? 0 : drive.g, rpm: Math.round(drive.rpm), md: drive.mode});
+  lastSent = {th:S.th, st:S.st, hn:S.hn, at:t};
+}
+setInterval(() => pushInput(true), 33);
+// 油门输入：直驱立刻发；挡位模式由每帧的模拟来算
+// 油门曲线：手机这边先把摇杆弯一下（expo），车上固件还会再平方一次
+let expo = +store.get('rc-expo', '1');
+// 车上有 6% 死区：推过 5% 的话最少发 7%，保证轻推也能让车慢慢爬，不会因为曲线太软直接变成 0
+const thShape = v => Math.abs(v) < .05 ? 0 : Math.sign(v) * Math.max(.07, Math.pow(Math.abs(v), expo));
+function setThrottle(v){ S.thIn = v; if (drive.mode === 'direct') { S.th = thShape(v); pushInput(); } }
+// 车真正给电机多少（和固件一样的算法）：起步力度 + (1 - 起步力度) × 油门² × 最高速度
+function motorDuty(th, cfg){ if (Math.abs(th) < .06) return 0; const dmin = cfg ? cfg.dmin : .3, dmax = cfg ? cfg.dmax : 1; return dmin + (1 - dmin) * th * th * dmax; }
+function drawCurve(){
+  const cv = $('cvCurve'); if (!cv) return; const g = cv.getContext('2d'), W = cv.width, H = cv.height, c = myCar(), cfg = c && c.cfg;
+  g.clearRect(0, 0, W, H);
+  const P = 16, x = t => P + t * (W - 2 * P), y = t => H - P - t * (H - 2 * P);
+  g.strokeStyle = '#3a3f48'; g.lineWidth = 1; for (const t of [0, .5, 1]) { g.beginPath(); g.moveTo(x(0), y(t)); g.lineTo(x(1), y(t)); g.stroke(); }
+  const dmin = cfg ? cfg.dmin : .3;
+  g.setLineDash([6, 6]); g.strokeStyle = '#e8322c'; g.beginPath(); g.moveTo(x(0), y(dmin)); g.lineTo(x(1), y(dmin)); g.stroke(); g.setLineDash([]);
+  g.strokeStyle = '#f5c400'; g.lineWidth = 4; g.beginPath();
+  for (let i = 0; i <= 100; i++) { const t = i / 100, d = motorDuty(thShape(t), cfg); i ? g.lineTo(x(t), y(d)) : g.moveTo(x(t), y(d)); }
+  g.stroke();
+  g.fillStyle = '#9aa0a8'; g.font = '22px system-ui'; const d10 = motorDuty(thShape(.1), cfg), d50 = motorDuty(thShape(.5), cfg);
+  g.fillText(`推 10% → 电机 ${Math.round(d10 * 100)}%   推 50% → 电机 ${Math.round(d50 * 100)}%`, x(0) + 6, P + 18);
+}
+$('sExpo').value = expo; $('lExpo').textContent = expo.toFixed(1) + (expo === 1 ? '（原来）' : '');
+$('sExpo').oninput = e => { expo = +e.target.value; store.set('rc-expo', e.target.value); $('lExpo').textContent = expo.toFixed(1) + (expo === 1 ? '（原来）' : ''); drawCurve(); };
+$('s_dmin2').oninput = e => { $('l_dmin2').textContent = Math.round(e.target.value * 100) + '%'; const c = myCar(); if (c) { c.cfg.dmin = +e.target.value; drawCurve(); } cfgTouching = true; };
+$('s_dmin2').onchange = e => { cfgTouching = false; sendWs({t:'cfg', car:S.car, dmin:+e.target.value}); };
+
+const myCar = () => S.cars.find(c => c.id === S.car);
+const driving = () => { const c = myCar(); return !!(c && c.driver === S.you); };
+const canCtl = () => { const c = myCar(); return !!(c && c.online && (!c.driver || c.driver === S.you)); };
+
+function renderCars(){
+  const sel = $('carSel'), online = S.cars.filter(c => c.online);
+  if ((S.car == null || !S.cars.some(c => c.id === S.car)) && S.cars.length) S.car = (online[0] || S.cars[0]).id;
+  sel.innerHTML = S.cars.length ? '' : '<option>没有车</option>';
+  for (const c of S.cars) {
+    const o = document.createElement('option');
+    o.value = c.id;
+    o.textContent = `车 ${c.id}` + (c.online ? '' : ' 离线') + (c.driver ? (c.driver === S.you ? ' · 你' : ' · ' + c.driverName) : '');
+    if (c.id === S.car) o.selected = true;
+    sel.appendChild(o);
+  }
+  const c = myCar(), mine = driving();
+  $('btnDrive').textContent = mine ? '放开' : '开这台车';
+  $('btnDrive').className = mine ? 'stop' : 'go';
+  $('btnDrive').disabled = !c || !c.online || (c.driver && !mine) || !!c.busy;
+  $('lCar').className = 'lamp' + (c && c.online ? (c.lowBatt || c.flipped ? ' warn' : ' ok') : '');
+  if (c) fillCfg(c.cfg);
+  renderMaint(c); renderCal(); renderSound(c);
+  const SN = {ok:'正常', none:'没接', off:'没开', err:'不工作'};
+  $('pInfo').textContent = c ? `车 ${c.id}，IP ${c.ip || '–'}，陀螺仪${SN[c.sens.imu]||'–'}，电压检测${SN[c.sens.bat]||'–'}` : '';
+}
+$('carSel').onchange = e => { const id = Number(e.target.value); if (driving()) sendWs({t:'release'}); S.car = id; S.calMsg = null; renderCars(); if (world.reset) world.reset(); };
+$('btnDrive').onclick = () => {
+  const c = myCar(); if (!c) return; audioUnlock();
+  if (c.driver === S.you) sendWs({t:'release'});
+  else { sendWs({t:'claim', car:c.id}); drive.g = 1; drive.v = 0; drive.rpm = IDLE; demo = { at: performance.now(), peak: 4800, up: .35 }; }
+};
+
+// ================= 音乐 / 起步灯 / 喇叭 =================
+let playingId = null;
+function renderSongs(){
+  const box = $('songs'); box.innerHTML = '';
+  for (const s of S.songs) {
+    const b = document.createElement('button'); b.className = 'song'; b.dataset.id = s.id;
+    b.innerHTML = '<span class="ic">▶</span><span></span>'; b.lastChild.textContent = s.name;
+    b.onclick = () => playSong(s.id, s.r, s.name);
+    box.appendChild(b);
+  }
+  renderSound(myCar());
+}
+function playSong(id, r, name){
+  audioUnlock();
+  if (playingId === id) { stopSong(); return; }
+  const loop = $('cLoop').checked;
+  if (!audio.play(r, loop, () => { playingId = null; renderSound(myCar()); })) { toast({type:'error', msg:'曲子格式不对'}); return; }
+  playingId = id; $('nowPlay').textContent = '正在放：' + name;
+  if ($('cCarMusic').checked && canCtl()) sendWs(id === 'custom' ? {t:'play', car:S.car, rtttl:r, loop} : {t:'play', car:S.car, song:id, loop});
+  renderSound(myCar());
+}
+function stopSong(){ audio.stopMusic(); playingId = null; if ($('cCarMusic').checked && canCtl()) sendWs({t:'mstop', car:S.car}); renderSound(myCar()); }
+function renderSound(c){
+  for (const b of document.querySelectorAll('.song')) { const on = b.dataset.id === playingId; b.classList.toggle('on', on); b.firstChild.textContent = on ? '■' : '▶'; }
+  if (!playingId) $('nowPlay').textContent = '';
+  const carOk = canCtl() && c && c.snd;
+  $('btnBzTest').disabled = !carOk; $('cCarMusic').disabled = !carOk;
+}
+$('btnMStop').onclick = stopSong;
+$('fSong').onchange = e => {
+  const f = e.target.files && e.target.files[0]; if (!f) return; audioUnlock();
+  audio.playFile(f, $('cLoop').checked, () => { playingId = null; renderSound(myCar()); });
+  playingId = 'file'; renderSound(myCar()); $('nowPlay').textContent = '正在放：' + f.name.replace(/\.[^.]+$/, '');
+  e.target.value = '';
+};
+$('btnRtttl').onclick = () => { const r = $('taRtttl').value.trim(); if (r) playSong('custom', r, r.split(':')[0] || '自定义'); };
+$('btnBzTest').onclick = () => { const c = myCar(); if (c) sendWs({t:'sfx', car:c.id, n:'coin'}); };
+$('selBz').onchange = e => sendWs({t:'cfg', car:S.car, bz:+e.target.value});
+$('cRvb').onchange = e => sendWs({t:'cfg', car:S.car, rvb:e.target.checked ? 1 : 0});
+$('cBzlo').onchange = e => sendWs({t:'cfg', car:S.car, bzlo:e.target.checked ? 1 : 0});
+// 起步灯：能控制这台车就通过服务器发（所有人的屏幕一起亮），否则只在自己屏幕上亮
+$('btnLights').onclick = () => { audioUnlock(); const c = myCar(); if (c && canCtl() && c.snd) sendWs({t:'sfx', car:c.id, n:'count'}); else startLights(); };
+
+function hornDown(){ audioUnlock(); if (driving()) { S.hn = 1; pushInput(true); } $('btnHorn').classList.add('on'); audio.horn(true); }
+function hornUp(){ if (S.hn) { S.hn = 0; pushInput(true); } $('btnHorn').classList.remove('on'); audio.horn(false); }
+$('btnHorn').addEventListener('pointerdown', e => { e.preventDefault(); $('btnHorn').setPointerCapture(e.pointerId); hornDown(); });
+$('btnHorn').addEventListener('pointerup', hornUp); $('btnHorn').addEventListener('pointercancel', hornUp);
+
+let lightsTimer = [];
+function startLights(){
+  lightsTimer.forEach(clearTimeout); lightsTimer = [];
+  const box = $('lights'), L = [...box.children];
+  box.hidden = false; box.classList.remove('go'); L.forEach(l => l.classList.remove('on'));
+  for (let i = 0; i < 5; i++) lightsTimer.push(setTimeout(() => { L[i].classList.add('on'); audio.beep(880, 160); if (world.gantry) world.gantry(i + 1); }, i * 1000));
+  lightsTimer.push(setTimeout(() => { box.classList.add('go'); L.forEach(l => l.classList.remove('on')); audio.beep(1760, 500); if (world.gantry) world.gantry(0); }, 5000));
+  lightsTimer.push(setTimeout(() => { box.hidden = true; box.classList.remove('go'); if (world.gantry) world.gantry(-1); }, 8000));
+}
+
+// ================= 水平校准 =================
+function renderCal(){
+  const c = myCar(), el = $('calState'), m = S.calMsg;
+  if (!c) { el.textContent = '–'; return; }
+  if (m && m.phase === 'run') { el.textContent = m.msg; el.style.color = 'var(--pit)'; }
+  else if (m && m.msg) { el.textContent = m.msg; el.style.color = m.ok ? 'var(--flag)' : 'var(--kerb)'; }
+  else if (c.calib) { el.textContent = `已校准（${c.calib.at}）：原始 ${c.calib.g}g，装歪 ${c.calib.tilt}° 已扣掉`; el.style.color = 'var(--flag)'; }
+  else { el.textContent = c.sens.imu === 'ok' ? '还没校准：现在显示的是原始数据' : '陀螺仪没在工作，校准不了'; el.style.color = 'var(--dim)'; }
+  $('btnCal').disabled = !canCtl() || c.sens.imu !== 'ok' || !!c.busy;
+  $('btnCalClr').disabled = !canCtl() || !c.calib;
+}
+$('btnCal').onclick = () => { const c = myCar(); if (c) sendWs({t:'calib', car:c.id}); };
+$('btnCalClr').onclick = () => { const c = myCar(); if (c) { S.calMsg = null; sendWs({t:'calib_clear', car:c.id}); } };
+
+// ================= 记录 =================
+const BAD = ['车重启','车断开','车没回应','车 WiFi 掉线','失联刹停','手机断开','手机卡顿','自检有问题','升级失败','水平校准失败'];
+function renderDiag(){
+  const list = S.diag.filter(d => S.car == null || d.car == null || d.car === S.car).slice(0, 20);
+  $('dCount').textContent = list.length ? `（最近 ${list.length} 条）` : '（暂时没有）';
+  $('diagList').innerHTML = '';
+  for (const d of list) {
+    const el = document.createElement('div');
+    el.className = 'dg ' + (['重新连上','手机回前台','自检完成','升级成功','水平校准完成'].includes(d.kind) ? 'ok' : BAD.includes(d.kind) ? 'bad' : '');
+    const extra = Object.entries(d).filter(([k]) => !['ts','time','kind','car','cause','t'].includes(k)).map(([k,v]) => `${k} ${v}`).join('，');
+    el.innerHTML = '<i></i><br><b></b> <span></span>' + (extra ? '<br><i class="x"></i>' : '');
+    el.querySelector('i').textContent = new Date(d.ts).toLocaleTimeString() + (d.car != null ? `，车 ${d.car}` : '');
+    el.querySelector('b').textContent = d.kind;
+    el.querySelector('span').textContent = d.cause;
+    if (extra) el.querySelector('.x').textContent = extra;
+    $('diagList').appendChild(el);
+  }
+}
+fetch('/api/diag').then(r => r.json()).then(j => { S.diag = j.recent || []; renderDiag(); }).catch(() => {});
+document.addEventListener('visibilitychange', () => { sendWs({t:'bg', hidden: document.hidden}); if (document.hidden) { setThrottle(0); S.st = 0; hornUp(); } });
+
+// ================= 车辆：升级 + 自检 =================
+function renderMaint(c){
+  if (!c) { $('pFw').textContent = '–'; return; }
+  const newer = c.fwAvail && c.fwAvail !== c.fw;
+  $('pFw').textContent = `车上 ${c.fw || '–'}，Mac 上 ${c.fwAvail || '没有（先在 Mac 跑 bash flash.sh --server）'}。陀螺仪芯片 ${c.chip || '没找到'}，I2C ${c.i2c || '空'}` + (c.busy ? `。正在${{ota:'升级',selftest:'自检',calib:'校准'}[c.busy] || c.busy}` : '');
+  const blocked = !c.online || !!c.busy || (c.driver && c.driver !== S.you);
+  $('btnOta').disabled = blocked || !c.fwAvail;
+  $('btnOta').textContent = c.fwAvail ? (newer ? `升级到 ${c.fwAvail}` : `重新装 ${c.fwAvail}`) : '升级固件';
+  $('btnOta').className = newer ? 'warn' : '';
+  $('btnSt').disabled = blocked;
+  $('stStop').hidden = c.busy !== 'selftest';
+}
+$('btnOta').onclick = () => { const c = myCar(); if (c) sendWs({t:'ota', car:c.id}); };
+$('btnSt').onclick = () => { const c = myCar(); if (!c) return; $('stList').innerHTML = ''; $('stNow').textContent = '等车回应…'; $('stNow').style.color = 'var(--pit)'; sendWs({t:'selftest', car:c.id}); };
+$('stStop').onclick = () => sendWs({t:'selftest_stop', car:S.car});
+function stItem(i){ let li = $('stList').children[i]; while (!li) { $('stList').appendChild(document.createElement('li')); li = $('stList').children[i]; } return li; }
+function onSelftest(m){
+  if (m.car !== S.car) return;
+  if (m.phase === 'begin') { openSheet('car'); $('stList').innerHTML = ''; $('stNow').style.color = 'var(--pit)'; }
+  if (m.phase === 'run') { const li = stItem(m.i); li.className = 'run'; li.textContent = m.name + '…'; $('stNow').textContent = `第 ${m.i + 1}/${m.n} 步：${m.look}`; }
+  else if (m.phase === 'done') { const li = stItem(m.i); li.className = m.ok ? 'ok' : 'bad'; li.textContent = (m.ok ? '✓ ' : '✗ ') + m.name; const sm = document.createElement('small'); sm.textContent = m.msg; li.appendChild(sm); }
+  else if (m.phase === 'end') { $('stNow').textContent = '自检完成：' + m.msg; $('stNow').style.color = 'var(--flag)'; }
+  else if (m.phase === 'abort') { $('stNow').textContent = '自检停了：' + m.msg; $('stNow').style.color = 'var(--kerb)'; }
+}
+
+// ================= 手感 =================
+const pct = v => Math.round(v*100) + '%', msf = v => v > 0 ? Math.round(v) + 'ms' : '关';
+const CF = [
+  ['feelDrive','dmax','最高速度',.2,1,.05,pct,''],
+  ['feelDrive','dmin','起步力度',0,.8,.05,pct,'轻推不动就调高'],
+  ['feelDrive','rdead','前后换向先刹车',0,300,10,msf,'猛前猛后会掉线就调大，0 = 直接反转'],
+  ['feelDrive','ramp','油门软启动',0,1000,50,msf,'0 = 一按就全速'],
+  ['feelDrive','scap','转向时油门上限',.3,1,.05,v => v >= 1 ? '不限' : pct(v),'转向加油门一起按时电压掉就调低'],
+  ['feelSteer','smax','转向力度（舵机 = 打多大角度）',.3,1,.05,pct,'',[0,1,2]],
+  ['feelSteer','pmin','比例起点',0,.9,.01,pct,'找轮子刚好开始动的力度：慢慢往上调，轻轻转方向，轮子刚开始动就停',[1]],
+  ['feelSteer','smin','转向起作用',0,.9,.05,pct,'打不动就调高',[0]],
+  ['feelSteer','shold','打到底后的保持力度',0,1,.05,pct,'打到底一直“哒哒”响就调低',[0,1]],
+  ['feelSteer','sret','放开时回正轻推',0,300,10,msf,'放开后前轮卡着不回中间就调大',[0,1]],
+  ['feelSteer','sretp','回正轻推力度',.2,1,.05,pct,'',[0,1]],
+  ['feelSteer','sc','舵机中位',900,2100,10,v => Math.round(v) + 'µs','放开时轮子不正就调这个',[2]],
+  ['feelSteer','sr','舵机行程',100,800,10,v => Math.round(v) + 'µs','打满时舵机顶住嗡嗡响就调小',[2]],
+  ['feelBatt','vlim','低于这个电压限速一半',5.5,7.4,.1,v => v.toFixed(1)+'V',''],
+  ['feelBatt','vcut','低于这个电压停车',5,7,.1,v => v.toFixed(1)+'V',''],
+  [null,'bvol','',0,1,.05,pct,''],
+];
+let cfgTouching = false;
+for (const [box,k,name,mn,mx,step,,hint,modes] of CF) {
+  if (!box) continue;
+  const d = document.createElement('div'); d.className = 'slide';
+  if (modes) d.dataset.modes = modes.join(',');
+  d.innerHTML = `<div class="t"><span></span><b id="l_${k}"></b></div><input type="range" id="s_${k}" min="${mn}" max="${mx}" step="${step}">` + (hint ? '<small></small>' : '');
+  d.querySelector('span').textContent = name; if (hint) d.querySelector('small').textContent = hint;
+  $(box).appendChild(d);
+}
+for (const [,k,,,,,f] of CF) {
+  const el = $('s_'+k);
+  el.oninput = () => { cfgTouching = true; $('l_'+k).textContent = f(+el.value); };
+  el.onchange = () => { cfgTouching = false; sendWs({t:'cfg', car:S.car, [k]:+el.value}); };
+}
+function fillCfg(cfg){
+  if (cfgTouching || !cfg) return;
+  for (const [,k,,,,,f] of CF) { if (cfg[k] == null) continue; $('s_'+k).value = cfg[k]; $('l_'+k).textContent = f(cfg[k]); }
+  $('cDinv').checked = !!cfg.dinv; $('cSinv').checked = !!cfg.sinv;
+  renderSmode(cfg.smode == null ? 1 : cfg.smode);
+  if (cfg.dmin != null) { $('s_dmin2').value = cfg.dmin; $('l_dmin2').textContent = Math.round(cfg.dmin * 100) + '%'; }
+  drawCurve();
+  $('selBz').value = String(cfg.bz == null ? 0 : cfg.bz); $('cRvb').checked = cfg.rvb !== 0; $('cBzlo').checked = !!cfg.bzlo;
+  const lock = !canCtl();
+  for (const el of document.querySelectorAll('#side input[type=range][id^=s_], #s_dmin2, #cDinv, #cSinv, #selBz, #cRvb, #cBzlo, #segSmode button')) el.disabled = lock;
+}
+function renderSmode(m){
+  segSet('segSmode', 'sm', String(m));
+  for (const d of document.querySelectorAll('#feelSteer .slide[data-modes]')) d.hidden = !d.dataset.modes.split(',').includes(String(m));
+  $('smodeNote').textContent = m === 0 ? '有转向就全力打到底，适合按钮转向。' :
+    m === 1 ? '车原来的转向是"电机 + 回中弹簧"，没有角度传感器。比例模式让电机用小力气对抗弹簧，所以输入小、轮子就只转一点。能用，但不会很准，电池电量也会影响。先调好下面的「比例起点」。' :
+    '舵机能精确转到任何角度（陀螺仪转向最好用）。要买一个 MG90S 舵机（约 RM 8）装在转向上：信号线接 D18，红线接 ESP32 的 VIN（5V），棕线接 GND，原来的转向电机从 L298N 拔掉。';
+}
+for (const b of document.querySelectorAll('#segSmode button')) b.onclick = () => { renderSmode(+b.dataset.sm); sendWs({t:'cfg', car:S.car, smode:+b.dataset.sm}); };
+$('cDinv').onchange = e => sendWs({t:'cfg', car:S.car, dinv: e.target.checked ? 1 : 0});
+$('cSinv').onchange = e => sendWs({t:'cfg', car:S.car, sinv: e.target.checked ? 1 : 0});
+$('inName').onchange = e => { S.name = e.target.value.trim() || S.name; store.set('rc-name', S.name); sendWs({t:'hello', name:S.name}); };
+
+// ================= 输入：触摸 =================
+let steerMode = store.get('rc-steer','stick');
+function stick(padEl, ringEl, axis, set){
+  let pid = null, ox = 0, oy = 0; const R = axis === 'x' ? 64 : 70;
+  padEl.addEventListener('pointerdown', e => {
+    if (e.target.closest('.paddle, .sbtn')) return;
+    if (padEl.id === 'padL' && steerMode === 'buttons') return;
+    if (pid !== null) return;
+    pid = e.pointerId; padEl.setPointerCapture(pid);
+    const r = padEl.getBoundingClientRect(); ox = e.clientX - r.left; oy = e.clientY - r.top;
+    ringEl.style.left = ox + 'px'; ringEl.style.top = oy + 'px'; ringEl.style.display = 'block';
+    ringEl.firstChild.style.transform = 'translate(-50%,-50%)'; S.src = '触摸'; audioUnlock();
+  });
+  padEl.addEventListener('pointermove', e => {
+    if (e.pointerId !== pid) return;
+    const r = padEl.getBoundingClientRect();
+    const d = clamp(axis === 'x' ? (e.clientX - r.left - ox) / R : -(e.clientY - r.top - oy) / R, -1, 1); set(d);
+    ringEl.classList.toggle('rev', d < 0);
+    ringEl.firstChild.style.transform = axis === 'x' ? `translate(calc(-50% + ${d*R}px),-50%)` : `translate(-50%,calc(-50% + ${-d*R}px))`;
+  });
+  const up = e => { if (e.pointerId !== pid) return; pid = null; set(0); ringEl.style.display = 'none'; };
+  padEl.addEventListener('pointerup', up); padEl.addEventListener('pointercancel', up);
+}
+let stickTouch = false;
+stick($('padL'), $('ringL'), 'x', v => { if (steerMode === 'stick' || steerMode === 'gyro') { S.st = v; stickTouch = v !== 0 || false; pushInput(); } });
+$('padL').addEventListener('pointerup', () => { stickTouch = false; }); $('padL').addEventListener('pointercancel', () => { stickTouch = false; });
+stick($('padR'), $('ringR'), 'y', v => setThrottle(v));
+
+for (const [id, d] of [['padDn', -1], ['padUp', 1]]) {
+  const el = $(id);
+  el.addEventListener('pointerdown', e => { e.stopPropagation(); e.preventDefault(); audioUnlock(); el.classList.add('on'); drive.shift(d); if (navigator.vibrate) try { navigator.vibrate(12); } catch {} });
+  const up = () => el.classList.remove('on'); el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+
+const MIN_PULSE = 150; let pressAt = 0, releaseTimer = null, held = 0;
+function steerBtn(el, dir){
+  el.addEventListener('pointerdown', e => { e.stopPropagation(); el.setPointerCapture(e.pointerId); clearTimeout(releaseTimer);
+    held = dir; pressAt = performance.now(); S.st = dir; S.src = '按钮'; el.classList.add('on'); pushInput(true); });
+  const up = () => { if (held !== dir) return; held = 0; el.classList.remove('on');
+    const left = MIN_PULSE - (performance.now() - pressAt);
+    const stop = () => { if (!held) { S.st = 0; pushInput(true); } };
+    if (left > 0) releaseTimer = setTimeout(stop, left); else stop(); };
+  el.addEventListener('pointerup', up); el.addEventListener('pointercancel', up);
+}
+steerBtn($('sbL'), -1); steerBtn($('sbR'), 1);
+function applySteerMode(){
+  $('sbtns').hidden = steerMode !== 'buttons';
+  $('wheel').toggleAttribute('hidden', steerMode !== 'gyro');   // svg 没有 .hidden 属性，要改 attribute
+  $('gyroBox').hidden = steerMode !== 'gyro';
+  $('hintL').textContent = steerMode === 'buttons' ? '点一下转一下 · 按住一直转' : steerMode === 'gyro' ? '转手机 = 转向（这里也能拖）' : '左手拖 · 转向';
+  $('selSteer').value = steerMode;
+  gyro.render();
+}
+$('selSteer').onchange = e => { steerMode = e.target.value; store.set('rc-steer', steerMode); S.st = 0; applySteerMode(); if (steerMode === 'gyro') gyro.enable(); };
+
+// 手机陀螺仪转向：用重力在屏幕平面里的方向算"方向盘角度"，手机往后仰多少都不影响
+const gyro = {
+  on: false, a: null, a0: null, sm: 0, gPlane: 0, lastAt: 0, err: '',
+  range: +store.get('rc-gyro-range', '30'), inv: store.get('rc-gyro-inv', '0') === '1',
+  async enable(){
+    if (!window.isSecureContext) { this.err = 'need-https'; this.render(); return; }
+    try {
+      if (typeof DeviceMotionEvent !== 'undefined' && DeviceMotionEvent.requestPermission) {
+        const r = await DeviceMotionEvent.requestPermission();
+        if (r !== 'granted') { this.err = '浏览器没给陀螺仪权限：弹窗时点「允许」。iPhone 还要在 设置 → Safari 打开「运动与方向访问」，然后再点一次'; this.render(); return; }
+      }
+    } catch (e) { this.err = '要用手指点按钮才能开（' + e.message + '）'; this.render(); return; }
+    if (!this.listening) { addEventListener('devicemotion', e => this.onMotion(e)); this.listening = true; }
+    this.on = true; this.err = ''; this.a0 = null;   // 下一笔数据当作正中间
+    this.render();
+  },
+  onMotion(e){
+    const g = e.accelerationIncludingGravity; if (!g || g.x == null) return;
+    this.gPlane = Math.hypot(g.x, g.y); this.lastAt = performance.now();
+    if (this.gPlane < 2.5) return;                               // 手机平放：屏幕平面里没有重力方向，不更新
+    const a = Math.atan2(g.x, g.y) * 180 / Math.PI;
+    if (this.a0 == null) this.a0 = a;
+    let d = a - this.a0; if (d > 180) d -= 360; if (d < -180) d += 360;
+    this.a = d;
+  },
+  tick(){
+    if (steerMode !== 'gyro' || !this.on || this.a == null) return;
+    let d = this.a * (this.inv ? -1 : 1);
+    const dz = 2; d = Math.abs(d) < dz ? 0 : d - Math.sign(d) * dz;
+    const v = clamp(d / this.range, -1, 1);
+    this.sm += (v - this.sm) * .45;
+    $('wheel').style.transform = `rotate(${(this.inv ? -1 : 1) * this.a}deg)`;
+    if (!stickTouch) { const nv = Math.abs(this.sm) < .02 ? 0 : +this.sm.toFixed(3); if (nv !== S.st) { S.st = nv; S.src = '陀螺仪'; pushInput(); } }
+  },
+  render(){
+    const https = $('gyroHttps'), ctl = $('gyroCtl');
+    const needHttps = !window.isSecureContext;
+    https.hidden = !needHttps; ctl.hidden = needHttps;
+    if (needHttps) { const port = S.httpsPort || 8443; $('gyroLink').href = `https://${location.hostname}:${port}/`; $('gyroLink').textContent = `打开 https://${location.hostname}:${port}`; return; }
+    $('sGyroRange').value = this.range; $('lGyroRange').textContent = this.range + '°'; $('cGyroInv').checked = this.inv;
+    const stale = this.on && performance.now() - this.lastAt > 1500;
+    $('gyroState').textContent = this.err || (!this.on ? '还没开启：点下面的按钮' : stale ? '收不到手机陀螺仪数据（这个设备可能没有陀螺仪）' : this.gPlane < 2.5 ? '手机太平了，竖起来一点' : '已开启 ✓ 转手机试试');
+    $('gyroState').style.color = this.err || stale ? 'var(--kerb)' : this.on ? 'var(--flag)' : '';
+  },
+};
+$('sGyroRange').oninput = e => { gyro.range = +e.target.value; store.set('rc-gyro-range', e.target.value); gyro.render(); };
+$('cGyroInv').onchange = e => { gyro.inv = e.target.checked; store.set('rc-gyro-inv', e.target.checked ? '1' : '0'); };
+$('btnGyroOn').onclick = () => gyro.enable();
+setInterval(() => { if (steerMode === 'gyro') gyro.render(); }, 1000);
+
+applySteerMode();
+
+// 键盘
+const keys = {};
+addEventListener('keydown', e => {
+  if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+  const k = e.key.toLowerCase();
+  if (!e.repeat) {
+    if (k === 'h') hornDown();
+    if (k === 'l') $('btnLights').click();
+    if (k === 'c') cycleCar();
+    if (k === 'e') drive.shift(1);
+    if (k === 'q') drive.shift(-1);
+    if (k === 'm') $('btnMode').click();
+    if (k === 'v') cycleCam();
+    if (k === 'r' && world.reset) world.reset();
+  }
+  keys[k] = 1; kb();
+  if (e.key === ' ' || e.key.startsWith('Arrow')) e.preventDefault();
+});
+addEventListener('keyup', e => { const k = e.key.toLowerCase(); keys[k] = 0; if (k === 'h') hornUp(); kb(true); });
+addEventListener('blur', () => { for (const k in keys) keys[k] = 0; kb(true); });
+// 键盘油门：按住 W 慢慢加到「键盘油门」设定的力度，同时按 Shift = 全力
+let kbTarget = 0, kbLevel = +store.get('rc-kblevel', '0.55');
+function kb(up){
+  const f = keys.w || keys.arrowup, b = keys.s || keys.arrowdown, l = keys.a || keys.arrowleft, r = keys.d || keys.arrowright;
+  if (!(f || b || l || r || keys[' '])) { if (up && S.src === '键盘') { kbTarget = 0; setThrottle(0); S.st = 0; pushInput(); } return; }
+  S.src = '键盘';
+  const lvl = keys.shift ? 1 : kbLevel;
+  kbTarget = keys[' '] ? (drive.mode === 'direct' ? 0 : -1) : f ? lvl : b ? -lvl : 0;
+  if (kbTarget === 0 || keys[' ']) setThrottle(kbTarget);          // 松开和刹车立刻生效
+  S.st = l ? -1 : r ? 1 : 0;
+  pushInput();
+}
+$('sKb').value = kbLevel; $('lKb').textContent = Math.round(kbLevel * 100) + '%';
+$('sKb').oninput = e => { kbLevel = +e.target.value; store.set('rc-kblevel', e.target.value); $('lKb').textContent = Math.round(kbLevel * 100) + '%'; };
+function kbRamp(dt){
+  if (S.src !== '键盘' || S.thIn === kbTarget) return;
+  const rate = Math.sign(kbTarget) !== Math.sign(S.thIn) && S.thIn !== 0 ? 8 : (keys.shift ? 4 : 2.2);   // 0 → 满 大约 0.45 秒
+  const d = kbTarget - S.thIn, step = rate * dt;
+  setThrottle(Math.abs(d) <= step ? kbTarget : S.thIn + Math.sign(d) * step);
+}
+function cycleCar(){ const on = S.cars.filter(c => c.online); if (!on.length) return; const i = on.findIndex(c => c.id === S.car); if (driving()) sendWs({t:'release'}); S.car = on[(i + 1) % on.length].id; renderCars(); if (world.reset) world.reset(); }
+
+// 手柄
+const gpPrev = {};
+function pollPad(){
+  const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
+  if (!gp) return;
+  const st = gp.axes[0] || 0, rt = gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp.buttons[6] ? gp.buttons[6].value : 0;
+  if (Math.abs(st) > .08 || rt > .05 || lt > .05) { S.src = '手柄'; S.st = Math.abs(st) > .08 ? st : 0; setThrottle(rt - lt); pushInput(); }
+  else if (S.src === '手柄' && (S.thIn || S.st)) { S.st = 0; setThrottle(0); pushInput(); }
+  const btn = i => !!(gp.buttons[i] && gp.buttons[i].pressed);
+  const edge = (i, fn, fnUp) => { const p = btn(i); if (p && !gpPrev[i]) fn(); if (!p && gpPrev[i] && fnUp) fnUp(); gpPrev[i] = p; };
+  edge(0, hornDown, hornUp); edge(5, () => drive.shift(1)); edge(4, () => drive.shift(-1)); edge(3, cycleCam);
+}
+
+// ================= 提示 =================
+const EVT = {
+  impact:['碰撞','bad'], flip:['翻车了，油门已断开','bad'], upright:['翻回来了',''], low_battery:['电量低','warn'],
+  car_online:['车上线',''], ota:['升级',''], ota_ok:['升级成功',''], ota_fail:['升级失败','bad'], selftest:['自检开始',''], sensor:['传感器','warn'],
+  pit_stop:['维修站叫停','bad'], car_offline:['车离线','bad'], driver_joined:['开始驾驶',''], driver_left:['离开驾驶',''], error:['','warn'], calib:['','']
+};
+function toast(m){
+  if (m.car != null && m.car !== S.car && m.type !== 'car_online') return;
+  const [label, cls] = EVT[m.type] || [m.type, ''];
+  const el = document.createElement('div'); el.className = 'toast ' + cls;
+  el.textContent = [label, m.msg].filter(Boolean).join('：');
+  $('toasts').prepend(el); setTimeout(() => el.remove(), 4000);
+  while ($('toasts').children.length > 3) $('toasts').lastChild.remove();
+  if (m.type === 'impact' && navigator.vibrate) try { navigator.vibrate(80); } catch {}
+}
+
+// ================= 3D 世界（three.js 从 Mac 上加载，手机不需要外网） =================
+const CAMS = ['chase', 'pov', 'tv', 'top'], CAMN = { chase:'追尾', pov:'车内', tv:'转播', top:'俯视' };
+let view = store.get('rc-view', '3d'), cam = store.get('rc-cam', 'chase');
+function cycleCam(){ setCam(CAMS[(CAMS.indexOf(cam) + 1) % CAMS.length]); }
+function setCam(c){ cam = CAMS.includes(c) ? c : 'chase'; store.set('rc-cam', cam); $('camName').textContent = CAMN[cam]; segSet('segCam', 'cam', cam); }
+$('btnCam').onclick = () => { if (view !== '3d') setView('3d'); else cycleCam(); };
+for (const b of document.querySelectorAll('#segCam button')) b.onclick = () => setCam(b.dataset.cam);
+for (const b of document.querySelectorAll('#segView button')) b.onclick = () => setView(b.dataset.view);
+$('btnReset').onclick = () => { if (world.reset) world.reset(); };
+function setView(v){
+  view = v; store.set('rc-view', v); segSet('segView', 'view', v);
+  const on3d = v === '3d' && world.ok;
+  $('w3d').hidden = !on3d; $('pov').hidden = on3d;
+  $('camtag').textContent = on3d ? '3D 世界 · 车身动作来自真车陀螺仪' : '陀螺仪地平线';
+  if (v === '3d' && !world.ok && !world.loading) loadWorld();
+}
+setCam(cam);
+function loadWorld(){
+  world.loading = true;
+  import('/vendor/three.module.min.js').then(THREE => { buildWorld(THREE); world.ok = true; world.loading = false; setView(view); })
+    .catch(err => { world.loading = false; console.warn(err); toast({type:'error', msg:'3D 没加载到：Mac 上重新跑 bash start.sh（会装 3D 引擎）。先用地平线画面'}); setView('2d'); });
+}
+
+function buildWorld(THREE){
+  const host = $('w3d');
+  const renderer = new THREE.WebGLRenderer({ antialias: !coarse, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, coarse ? 1.5 : 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  host.appendChild(renderer.domElement);
+  const scene = new THREE.Scene();
+  const SKY = 0x101722;
+  scene.background = new THREE.Color(SKY); scene.fog = new THREE.Fog(SKY, 50, 260);
+  const camera = new THREE.PerspectiveCamera(62, 1, .1, 700);
+  scene.add(new THREE.HemisphereLight(0xa9bcd8, 0x2a241c, 2.2));
+  const moon = new THREE.DirectionalLight(0xe4ecff, 2.0); moon.position.set(-40, 80, 30); scene.add(moon);
+
+  const canvasTex = (w, h, draw, rep) => { const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h); const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep, rep); } return t; };
+  const mat = (color, o = {}) => new THREE.MeshLambertMaterial({ color, ...o });
+  const box = (w, h, d, m) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const up = new THREE.Vector3(0, 1, 0);
+
+  // 地面
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(700, 700), mat(0xffffff, { map: canvasTex(256, 256, (g, w, h) => {
+    g.fillStyle = '#2b2d31'; g.fillRect(0, 0, w, h);
+    for (let i = 0; i < 2600; i++) { const v = 34 + Math.random() * 30; g.fillStyle = `rgb(${v},${v},${v + 3})`; g.fillRect(Math.random() * w, Math.random() * h, 1.5, 1.5); }
+    g.strokeStyle = '#ffffff12'; g.lineWidth = 2; g.strokeRect(0, 0, w, h);
+  }, 70) }));
+  ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+  // 赛道：一条闭合路线，沿着它铺路面、红白路肩、轮胎墙
+  const P = [[0,0],[0,-60],[14,-82],[42,-86],[62,-70],[58,-44],[34,-30],[30,-8],[52,8],[56,34],[36,52],[6,54],[-18,42],[-22,18]].map(([x, z]) => new THREE.Vector3(x, 0, z));
+  const curve = new THREE.CatmullRomCurve3(P, true, 'centripetal');
+  const N = 420, HW = 7, segLen = curve.getLength() / N;
+  const pos = [], uv = [], idx = [], frames = [];
+  for (let i = 0; i <= N; i++) {
+    const t = (i / N) % 1, p = curve.getPointAt(t), tan = curve.getTangentAt(t), nrm = new THREE.Vector3(-tan.z, 0, tan.x);
+    frames.push({ p, tan, nrm });
+    const a = p.clone().addScaledVector(nrm, HW), b = p.clone().addScaledVector(nrm, -HW);
+    pos.push(a.x, .02, a.z, b.x, .02, b.z); uv.push(0, i * .5, 1, i * .5);
+    if (i < N) { const k = i * 2; idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2); }
+  }
+  const road = new THREE.BufferGeometry(); road.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); road.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); road.setIndex(idx); road.computeVertexNormals();
+  const roadTex = canvasTex(64, 64, (g, w, h) => { g.fillStyle = '#44464b'; g.fillRect(0, 0, w, h); for (let i = 0; i < 260; i++) { const v = 56 + Math.random() * 25; g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(Math.random() * w, Math.random() * h, 1, 1); } g.fillStyle = '#ffffff66'; g.fillRect(w / 2 - 1, 0, 2, h / 2); });
+  roadTex.wrapS = roadTex.wrapT = THREE.RepeatWrapping;
+  scene.add(new THREE.Mesh(road, mat(0xffffff, { map: roadTex, side: THREE.DoubleSide })));
+  const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1);
+  const kerbs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.4, .12, 1), mat(0xffffff), N * 2);
+  const red = new THREE.Color(0xe8322c), wht = new THREE.Color(0xf2f0eb);
+  let ki = 0;
+  for (let i = 0; i < N; i++) {
+    const { p, tan, nrm } = frames[i];
+    q.setFromAxisAngle(up, Math.atan2(tan.x, tan.z));
+    for (const s of [1, -1]) {
+      const c = p.clone().addScaledVector(nrm, s * (HW + .7)); c.y = .06;
+      m4.compose(c, q, new THREE.Vector3(1, 1, segLen * 1.02)); kerbs.setMatrixAt(ki, m4); kerbs.setColorAt(ki, (i >> 1) % 2 ? red : wht); ki++;
+    }
+  }
+  scene.add(kerbs);
+  const tyres = new THREE.InstancedMesh(new THREE.CylinderGeometry(.6, .6, .9, 10), mat(0x1a1b1f), Math.ceil(N / 3) * 2); let ti = 0;
+  q.identity();
+  for (let i = 0; i < N; i += 3) { const { p, nrm } = frames[i]; for (const s of [1, -1]) { const c = p.clone().addScaledVector(nrm, s * (HW + 4.5)); c.y = .45; m4.compose(c, q, one); tyres.setMatrixAt(ti++, m4); } }
+  tyres.count = ti; scene.add(tyres);
+  // 起跑线 + 起跑灯门架
+  const s0 = frames[0], heading0 = Math.atan2(s0.tan.x, s0.tan.z);
+  const chk = new THREE.Mesh(new THREE.PlaneGeometry(HW * 2, 2.4), mat(0xffffff, { map: canvasTex(128, 24, (g) => { for (let x = 0; x < 16; x++) for (let y = 0; y < 3; y++) { g.fillStyle = (x + y) % 2 ? '#111' : '#eee'; g.fillRect(x * 8, y * 8, 8, 8); } }) }));
+  chk.rotation.order = 'YXZ'; chk.rotation.set(-Math.PI / 2, heading0, 0); chk.position.set(s0.p.x, .04, s0.p.z); scene.add(chk);
+  const gantry = new THREE.Group(); scene.add(gantry);
+  gantry.position.copy(s0.p).addScaledVector(s0.tan, 6); gantry.rotation.y = heading0;
+  const steel = mat(0x3a3f48);
+  for (const s of [-1, 1]) { const post = box(.5, 8, .5, steel); post.position.set(s * (HW + 1.5), 4, 0); gantry.add(post); }
+  const beam = box(HW * 2 + 3.5, 1.4, .7, steel); beam.position.y = 8; gantry.add(beam);
+  const lampMats = [];
+  for (let i = 0; i < 5; i++) { const m = new THREE.MeshBasicMaterial({ color: 0x2b1212 }); lampMats.push(m); for (const side of [1, -1]) { const l = new THREE.Mesh(new THREE.CircleGeometry(.45, 18), m); l.position.set((i - 2) * 1.5, 8, side * .37); if (side < 0) l.rotation.y = Math.PI; gantry.add(l); } }
+  world.gantry = n => lampMats.forEach((m, i) => m.color.setHex(n === 0 ? 0x2fbf71 : n > 0 && i < n ? 0xff3b2f : 0x2b1212));
+  // 维修区墙 + 黄色灯带、看台
+  const pitWall = box(.6, 1.2, 66, mat(0x30343b)); pitWall.position.set(-15, .6, -30); scene.add(pitWall);
+  const neon = box(.12, .14, 66, new THREE.MeshBasicMaterial({ color: 0xf5c400 })); neon.position.set(-14.65, 1.27, -30); scene.add(neon);
+  const stand = new THREE.Group(); scene.add(stand); stand.position.set(-24, 0, -30);
+  for (let r = 0; r < 6; r++) { const step = box(1.6, .8 + r * .8, 58, mat(r % 2 ? 0x3a3f48 : 0x30343b)); step.position.set(-r * 1.6, (.8 + r * .8) / 2, 0); stand.add(step); }
+  const roof = box(12, .3, 60, steel); roof.position.set(-4, 7.6, 0); stand.add(roof);
+  const crowdTex = canvasTex(256, 32, (g, w, h) => { g.fillStyle = '#1b1d22'; g.fillRect(0, 0, w, h); const cs = ['#e8322c', '#f2f0eb', '#f5c400', '#3d8bff', '#2fbf71', '#9aa0a8']; for (let x = 0; x < w; x += 4) for (let y = 4; y < h; y += 10) { g.fillStyle = cs[Math.random() * cs.length | 0]; g.fillRect(x + Math.random() * 2, y, 2.5, 4); } });
+  crowdTex.wrapS = THREE.RepeatWrapping; crowdTex.repeat.set(6, 1);
+  for (let r = 0; r < 6; r++) { const cr = new THREE.Mesh(new THREE.PlaneGeometry(58, .7), new THREE.MeshBasicMaterial({ map: crowdTex, fog: true })); cr.position.set(-r * 1.6 + .82, .8 + r * .8 + .3, 0); cr.rotation.y = Math.PI / 2; stand.add(cr); }
+  // 远处城市：亮着的窗
+  const winTex = canvasTex(64, 128, (g, w, h) => { g.fillStyle = '#0b0e14'; g.fillRect(0, 0, w, h); for (let y = 4; y < h; y += 8) for (let x = 4; x < w; x += 8) if (Math.random() < .35) { g.fillStyle = Math.random() < .8 ? '#f5c40099' : '#9ec3ff88'; g.fillRect(x, y, 4, 4); } });
+  const bmat = new THREE.MeshBasicMaterial({ map: winTex });
+  for (let i = 0; i < 70; i++) {
+    const a = i / 70 * Math.PI * 2 + Math.random() * .05, r = 190 + Math.random() * 80, h = 20 + Math.random() * 70, w = 10 + Math.random() * 16;
+    const b = box(w, h, w, bmat); b.position.set(Math.cos(a) * r + 20, h / 2, Math.sin(a) * r - 15); scene.add(b);
+  }
+  const poleM = mat(0x30343b), bulbM = new THREE.MeshBasicMaterial({ color: 0xfff1c2 });
+  for (let i = 0; i < N; i += 30) { const { p, nrm } = frames[i]; const c = p.clone().addScaledVector(nrm, HW + 7); const pole = box(.3, 9, .3, poleM); pole.position.set(c.x, 4.5, c.z); scene.add(pole); const bulb = box(1.6, .3, .6, bulbM); bulb.position.set(c.x, 9, c.z); scene.add(bulb); }
+
+  // ---------- 车：车头朝 -Z。car = 位置 + 朝向，body = 侧倾 / 俯仰（来自陀螺仪） ----------
+  const car = new THREE.Group(), body = new THREE.Group(); car.add(body); scene.add(car);
+  const paint = mat(0xe8322c), white = mat(0xf2f0eb), black = mat(0x14161a), glass = mat(0x0c1018);
+  const add = (m, x, y, z) => { m.position.set(x, y, z); body.add(m); return m; };
+  add(box(2.0, .45, 4.3, paint), 0, .55, 0);
+  add(box(1.5, .3, 1.6, paint), 0, .5, -2.6).rotation.x = .12;
+  add(box(2.3, .08, .7, black), 0, .3, -3.35);
+  add(box(.5, .02, 4.3, white), 0, .785, 0);
+  add(box(1.3, .5, 1.5, glass), 0, 1.0, .2);
+  add(box(1.3, .08, 1.0, paint), 0, 1.27, .45);
+  for (const s of [-1, 1]) add(box(.08, .55, .3, black), s * .55, 1.05, 1.95);
+  add(box(2.3, .1, .65, black), 0, 1.35, 2.0);
+  const tailMat = new THREE.MeshBasicMaterial({ color: 0x5a0d0a });
+  add(box(1.6, .12, .05, tailMat), 0, .62, 2.17);
+  for (const s of [-1, 1]) add(box(.45, .14, .05, new THREE.MeshBasicMaterial({ color: 0xfff6dd })), s * .7, .6, -3.12);
+  const wheelGeo = new THREE.CylinderGeometry(.48, .48, .42, 18); wheelGeo.rotateZ(Math.PI / 2);
+  const hubGeo = new THREE.CylinderGeometry(.24, .24, .44, 8); hubGeo.rotateZ(Math.PI / 2);
+  const hubM = mat(0x8a9099), wheels = [], steerPivots = [];
+  for (const [x, z, front] of [[-1.1, -1.75, 1], [1.1, -1.75, 1], [-1.1, 1.55, 0], [1.1, 1.55, 0]]) {
+    const pivot = new THREE.Group(); pivot.position.set(x, .48, z); car.add(pivot);
+    const w = new THREE.Mesh(wheelGeo, black); w.add(new THREE.Mesh(hubGeo, hubM)); pivot.add(w);
+    wheels.push(w); if (front) steerPivots.push(pivot);
+  }
+  const shadow = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 5.2), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: .45, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = .03; car.add(shadow);
+  const headLight = new THREE.SpotLight(0xfff1d6, 120, 45, .55, .5, 1.2); headLight.position.set(0, 1, -2.5); headLight.target.position.set(0, 0, -14); car.add(headLight); car.add(headLight.target);
+
+  // 漂移烟
+  const smokeTex = canvasTex(64, 64, (g) => { const gr = g.createRadialGradient(32, 32, 2, 32, 32, 30); gr.addColorStop(0, '#ddddddcc'); gr.addColorStop(1, '#dddddd00'); g.fillStyle = gr; g.fillRect(0, 0, 64, 64); });
+  const puffs = []; for (let i = 0; i < 36; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0 })); s.visible = false; scene.add(s); puffs.push({ s, life: 0, v: new THREE.Vector3() }); }
+  let puffI = 0;
+
+  const st = { x: 0, z: 0, h: 0, prevYaw: null, spin: 0, shake: 0 };
+  const TV = [[-20, 10, -10], [70, 12, -60], [40, 10, 60], [-30, 14, 40], [20, 16, -95], [70, 10, 20]].map(a => new THREE.Vector3(...a));
+  const camPos = new THREE.Vector3(), lookAt = new THREE.Vector3(), tmp = new THREE.Vector3(), want = new THREE.Vector3();
+  world.reset = () => {
+    st.x = s0.p.x - s0.tan.x * 4; st.z = s0.p.z - s0.tan.z * 4; st.h = Math.atan2(-s0.tan.x, -s0.tan.z); st.prevYaw = null;
+    camPos.set(st.x + Math.sin(st.h) * 10, 4.2, st.z + Math.cos(st.h) * 10);
+  };
+  world.shake = () => { st.shake = .45; };
+  world.reset();
+  world.resize = () => { const w = host.clientWidth || 1, h = host.clientHeight || 1; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); };
+  world.resize();
+  if (window.ResizeObserver) new ResizeObserver(() => world.resize()).observe(host);
+
+  const SPEED = 30;   // 车速 1.0 = 每秒 30 个单位（车长 4.3）
+  world.frame = (dt, T, v, steer) => {
+    // 朝向：有陀螺仪就跟真车转；没有就按方向盘估
+    if (T && T.yaw != null && T.imu === 'ok') {
+      if (st.prevYaw != null) { let d = T.yaw - st.prevYaw; if (d > 180) d -= 360; if (d < -180) d += 360; st.h += d * Math.PI / 180; }
+      st.prevYaw = T.yaw;
+    } else st.h -= steer * v * 2.2 * dt;
+    const fx = -Math.sin(st.h), fz = -Math.cos(st.h);
+    st.x = clamp(st.x + fx * v * SPEED * dt, -220, 220); st.z = clamp(st.z + fz * v * SPEED * dt, -220, 220);
+    car.position.set(st.x, 0, st.z); car.rotation.y = st.h;
+    const roll = T && T.roll != null ? T.roll : 0, pitch = T && T.pitch != null ? T.pitch : 0;
+    const flipped = T && T.az != null && T.az < -.4;
+    body.rotation.z += ((flipped ? Math.PI : -clamp(roll, -60, 60) * Math.PI / 180) - body.rotation.z) * .3;
+    body.rotation.x += (-clamp(pitch, -45, 45) * Math.PI / 180 - body.rotation.x) * .3;
+    st.spin += v * SPEED * dt / .48; for (const w of wheels) w.rotation.x = -st.spin;
+    for (const p of steerPivots) p.rotation.y += (-steer * .45 - p.rotation.y) * .4;
+    tailMat.color.setHex(drive.brake > .1 || v < -.02 ? 0xff2a1a : 0x5a0d0a);
+    const slip = Math.abs(steer) * Math.abs(v);
+    if (slip > .45 && Math.random() < slip) {
+      const pf = puffs[puffI++ % puffs.length]; pf.life = 1; pf.s.visible = true;
+      tmp.set((Math.random() - .5) * 2.2, .5, 1.6).applyAxisAngle(up, st.h).add(car.position); pf.s.position.copy(tmp);
+      pf.v.set((Math.random() - .5) * 1.5, 1 + Math.random(), (Math.random() - .5) * 1.5); pf.s.scale.setScalar(1.2);
+    }
+    for (const pf of puffs) if (pf.life > 0) { pf.life -= dt * .9; pf.s.position.addScaledVector(pf.v, dt); pf.s.scale.addScalar(dt * 3); pf.s.material.opacity = Math.max(0, pf.life * .5); if (pf.life <= 0) pf.s.visible = false; }
+    // 相机
+    camera.rotation.order = 'XYZ';
+    if (cam === 'chase') {
+      want.set(st.x - fx * 12, 4.8, st.z - fz * 12);
+      camPos.lerp(want, Math.min(1, dt * 7)); camera.position.copy(camPos);
+      lookAt.set(st.x + fx * 6, 1.2, st.z + fz * 6); camera.lookAt(lookAt); camera.fov = 62 + Math.abs(v) * 10;
+    } else if (cam === 'pov') {
+      camera.position.set(st.x + fx * .3, 1.35, st.z + fz * .3);
+      camera.rotation.order = 'YXZ'; camera.rotation.set(body.rotation.x - .05, st.h, body.rotation.z);
+      camera.fov = 75 + Math.abs(v) * 12;
+    } else if (cam === 'tv') {
+      let best = 0, bd = 1e9; TV.forEach((p, i) => { const d = p.distanceToSquared(car.position); if (d < bd) { bd = d; best = i; } });
+      camera.position.copy(TV[best]); camera.lookAt(st.x, 1, st.z);
+      camera.fov = clamp(1400 / Math.sqrt(bd), 14, 55);
+    } else {
+      camera.position.set(st.x, 60, st.z + 18); camera.lookAt(st.x, 0, st.z); camera.fov = 50;
+    }
+    if (st.shake > 0) { st.shake -= dt; camera.position.x += (Math.random() - .5) * st.shake; camera.position.y += (Math.random() - .5) * st.shake; }
+    camera.updateProjectionMatrix();
+    renderer.render(scene, camera);
+  };
+}
+
+// ================= 2D 地平线（没有 3D 时用） =================
+const cv = $('pov'), cx = cv.getContext('2d');
+let roll = 0, pitch = 0, scroll = 0;
+function fit(c){ const dpr = Math.min(devicePixelRatio || 1, 2), W = c.clientWidth, H = c.clientHeight; if (c.width !== Math.round(W*dpr) || c.height !== Math.round(H*dpr)) { c.width = Math.round(W*dpr); c.height = Math.round(H*dpr); } c.getContext('2d').setTransform(dpr,0,0,dpr,0,0); return [W, H]; }
+function drawPov(v){
+  const [W, H] = fit(cv);
+  const T = S.tel[S.car] || {};
+  roll += ((T.roll || 0) - roll) * .25; pitch += ((T.pitch || 0) - pitch) * .25;
+  cx.clearRect(0, 0, W, H);
+  cx.save(); cx.translate(W/2, H/2); cx.rotate(-roll * Math.PI / 180);
+  const off = pitch * H / 90, D = Math.max(W, H) * 2;
+  const sky = cx.createLinearGradient(0, -H, 0, off); sky.addColorStop(0, '#0d1118'); sky.addColorStop(1, '#232a33');
+  cx.fillStyle = sky; cx.fillRect(-D, -D, D*2, D + off);
+  cx.fillStyle = '#1c1d20'; cx.fillRect(-D, off, D*2, D);
+  scroll = (scroll + v * .06 + 1000) % 2;
+  const vp = off, F = Math.min(W, H) * .9, RW = Math.min(W, H) * 1.1, L = .5;
+  const yz = z => vp + F / z, xz = z => RW / z;
+  cx.fillStyle = '#2a2b30'; cx.beginPath(); cx.moveTo(-xz(40), yz(40)); cx.lineTo(xz(40), yz(40)); cx.lineTo(xz(.6), yz(.6)); cx.lineTo(-xz(.6), yz(.6)); cx.fill();
+  for (let z = .6 - (scroll % (L * 2)) + L * 2; z < 40; z += L) {
+    const i = Math.round((z + scroll) / L);
+    if (z - L <= .3) continue;
+    const y1 = yz(z - L), y2 = yz(z), w1 = xz(z - L), w2 = xz(z);
+    for (const sd of [-1, 1]) { cx.fillStyle = i % 2 ? '#e8322c' : '#f2f0eb'; cx.beginPath(); cx.moveTo(sd * w1, y1); cx.lineTo(sd * w1 * 1.12, y1); cx.lineTo(sd * w2 * 1.12, y2); cx.lineTo(sd * w2, y2); cx.fill(); }
+    if (i % 2) { cx.fillStyle = '#f2f0eb40'; cx.beginPath(); cx.moveTo(-w1 * .02, y1); cx.lineTo(w1 * .02, y1); cx.lineTo(w2 * .02, y2); cx.lineTo(-w2 * .02, y2); cx.fill(); }
+  }
+  cx.strokeStyle = '#f2f0eb88'; cx.lineWidth = 1.5; cx.beginPath(); cx.moveTo(-D, off); cx.lineTo(D, off); cx.stroke();
+  cx.restore();
+}
+
+// ================= 仪表：转速表 / 油门表 + 换挡灯 =================
+const thrC = $('dThr');
+function drawDial(sim, rpm, gearTxt, th, kmh, limiter, duty){
+  const [W] = fit(thrC), g = thrC.getContext('2d'), c = W/2, r = W/2 - 10;
+  g.clearRect(0, 0, W, W);
+  g.fillStyle = '#16181cd8'; g.beginPath(); g.arc(c, c, W/2 - 1, 0, 7); g.fill();
+  const a0 = Math.PI * .75, span = Math.PI * 1.5;
+  g.lineCap = 'butt'; g.lineWidth = W * .07;
+  g.strokeStyle = '#3a3f48'; g.beginPath(); g.arc(c, c, r - 4, a0, a0 + span); g.stroke();
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (sim) {
+    const MAXR = 10000, frac = clamp(rpm / MAXR, 0, 1);
+    g.strokeStyle = '#e8322c66'; g.beginPath(); g.arc(c, c, r - 4, a0 + span * RED / MAXR, a0 + span); g.stroke();
+    g.strokeStyle = limiter ? '#3d8bff' : rpm > RED * .97 ? '#e8322c' : '#f2f0eb'; g.beginPath(); g.arc(c, c, r - 4, a0, a0 + span * frac); g.stroke();
+    g.fillStyle = '#9aa0a8'; g.font = `600 ${W * .075}px "Barlow Condensed",system-ui`;
+    for (let k = 0; k <= 10; k += 2) { const a = a0 + span * k / 10; g.fillText(k, c + Math.cos(a) * (r - W * .17), c + Math.sin(a) * (r - W * .17)); }
+    const flash = performance.now() - gearFlashAt < 220;
+    g.fillStyle = gearTxt === 'R' ? '#e8322c' : flash ? '#f5c400' : '#f2f0eb'; g.font = `700 ${W * .34}px "Barlow Condensed",system-ui`; g.fillText(gearTxt, c, c - W * .02);
+    g.fillStyle = '#9aa0a8'; g.font = `600 ${W * .1}px "Barlow Condensed",system-ui`; g.fillText(`${Math.round(kmh)} km/h`, c, c + W * .27);
+    const G = GEARS[gearTxt === 'R' ? -1 : +gearTxt];
+    if (G) { g.font = `600 ${W * .075}px "Barlow Condensed",system-ui`; g.fillStyle = '#f5c400'; g.fillText(`最高 ${Math.round(G.top * 100)}%`, c, c + W * .39); }
+  } else {
+    const a = Math.abs(th);
+    if (a > .01) { g.strokeStyle = th > 0 ? '#2fbf71' : '#e8322c'; g.beginPath(); g.arc(c, c, r - 4, a0, a0 + span * a); g.stroke(); }
+    g.fillStyle = '#f2f0eb'; g.font = `700 ${W * .3}px "Barlow Condensed",system-ui`; g.fillText(Math.round(a * 100), c, c - W * .02);
+    g.font = `600 ${W * .11}px "Barlow Condensed",system-ui`; g.fillStyle = th < -.01 ? '#e8322c' : '#9aa0a8';
+    g.fillText(th < -.01 ? '倒车' : th > .01 ? '摇杆 %' : '空挡', c, c + W * .24);
+    if (duty != null && Math.abs(th) > .01) { g.font = `600 ${W * .085}px "Barlow Condensed",system-ui`; g.fillStyle = '#f5c400'; g.fillText(`电机 ${Math.round(duty * 100)}%`, c, c + W * .38); }
+  }
+}
+const ledEls = $('leds').children;
+function drawLeds(rpm, limiter){
+  const n = Math.round(clamp((rpm - RED * .55) / (RED * .42), 0, 1) * 12);
+  const blue = limiter || rpm >= RED * .965, blink = (performance.now() / 70 | 0) % 2;
+  for (let i = 0; i < 12; i++) ledEls[i].className = blue ? (blink ? 'b' : '') : i < n ? (i < 4 ? 'g' : i < 8 ? 'r' : 'b') : '';
+}
+const gC = $('dG'); const trail = [];
+function drawG(){
+  const [W] = fit(gC), g = gC.getContext('2d'), T = S.tel[S.car] || {}, c = W/2, R = W/2 - 8;
+  g.clearRect(0, 0, W, W);
+  g.fillStyle = '#16181cc8'; g.beginPath(); g.arc(c, c, W/2 - 1, 0, 7); g.fill();
+  g.strokeStyle = '#3a3f48'; g.lineWidth = 1.5;
+  for (const k of [1, .5]) { g.beginPath(); g.arc(c, c, R * k, 0, 7); g.stroke(); }
+  g.beginPath(); g.moveTo(c - R, c); g.lineTo(c + R, c); g.moveTo(c, c - R); g.lineTo(c, c + R); g.stroke();
+  if (T.glat == null) { g.fillStyle = '#9aa0a8'; g.font = `600 ${W * .12}px system-ui`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(T.imu === 'err' ? '陀螺仪坏' : '无陀螺仪', c, c); return; }
+  const x = c + clamp(T.glat, -1.5, 1.5) / 1.5 * R, y = c - clamp(T.glon, -1.5, 1.5) / 1.5 * R;
+  trail.push([x, y]); if (trail.length > 20) trail.shift();
+  trail.forEach(([px, py], i) => { g.fillStyle = `rgba(245,196,0,${i / 50})`; g.beginPath(); g.arc(px, py, 4, 0, 7); g.fill(); });
+  g.fillStyle = Math.abs((T.g || 1) - 1) > 1 ? '#e8322c' : '#f5c400'; g.beginPath(); g.arc(x, y, 7, 0, 7); g.fill();
+  g.fillStyle = '#f2f0eb'; g.font = `600 ${W * .14}px "Barlow Condensed",system-ui`; g.textAlign = 'center'; g.textBaseline = 'alphabetic'; g.fillText((T.g || 0).toFixed(2) + 'g', c, W - 10);
+}
+
+function fmt(v, d, u){ return v == null || isNaN(v) ? '–' : v.toFixed(d) + (u || ''); }
+const setText = (ids, txt, color) => { for (const id of ids) { const el = $(id); el.textContent = txt; el.style.color = color || ''; } };
+function renderHud(){
+  const c = myCar(), T = S.tel[S.car] || {}, fresh = performance.now() - S.lastTelAt < 1000;
+  const srvOk = S.ws && S.ws.readyState === 1;
+  $('lSrv').className = 'lamp' + (srvOk ? ' ok' : '');
+  if (T.bat === 'ok' && T.v > 1) setText(['vBat','vBatTop','sBat'], T.v.toFixed(2) + 'V', T.v < (c && c.cfg.vlim || 6.6) ? 'var(--kerb)' : T.v < 7.2 ? 'var(--pit)' : '');
+  else setText(['vBat','vBatTop','sBat'], T.bat === 'err' ? '坏' : '未测', 'var(--dim)');
+  const r1 = S.rtt1, r2 = T.rtt, lat = r1 != null && r2 != null ? Math.round(r1/2 + r2/2) : null;
+  setText(['vLat','vLatTop','sLat'], lat != null ? lat + 'ms' : '–', lat == null ? '' : lat < 60 ? 'var(--flag)' : lat < 120 ? 'var(--pit)' : 'var(--kerb)');
+  $('latDetail').textContent = `手机↔服务器 ${r1 != null ? r1 + 'ms' : '–'}，服务器↔车 ${r2 != null ? r2 + 'ms' : '–'}，输入：${S.src}`;
+  setText(['vRssi','sRssi'], T.rssi ? T.rssi + '' : '–', T.rssi < -80 ? 'var(--kerb)' : T.rssi < -70 ? 'var(--pit)' : '');
+  $('vHz').textContent = S.hz + 'Hz';
+  setText(['vRoll','sRoll'], fmt(T.roll, 0, '°')); $('vPitch').textContent = fmt(T.pitch, 0, '°');
+  $('vYaw').textContent = fmt(T.gz, 0, '°/s'); $('vTemp').textContent = fmt(T.tc, 0, '°C');
+  let b = '', sub = '';
+  if (!srvOk) { b = '连接服务器'; sub = '确认 Mac 上 start.sh 在跑'; }
+  else if (!S.cars.some(x => x.online)) { b = '等车上线'; sub = '打开车的开关，等 5 秒'; }
+  else if (!c || !c.online) { b = '这台车离线'; sub = '换一台，或者看看车有没有电'; }
+  else if (c.flipped) { b = '翻车了'; sub = '把车翻回来就能继续开'; }
+  else if (c.busy) { b = {ota:'升级中', selftest:'自检中', calib:'校准中'}[c.busy] || c.busy; sub = c.busy === 'ota' ? '车会自己重启，大约 20–40 秒' : '别碰车'; }
+  else if (!c.driver) { b = '点「开这台车」'; sub = '然后左手转向，右手油门'; }
+  else if (c.driver === S.you && !fresh) { b = '车没有回应'; sub = '信号太弱，或者车没电了'; }
+  else if (c.driver === S.you && T.fs && Math.abs(S.th) > .1) { b = '刹停中'; sub = '网络断了一下'; }
+  $('banner').hidden = !b;
+  $('banner').firstChild.textContent = b; $('banner').lastChild.textContent = sub;
+}
+
+// ================= 每帧 =================
+let lastT = performance.now(), tick = 0;
+function frame(now){
+  const dt = Math.min(.05, Math.max(0, (now - lastT) / 1000)); lastT = now;
+  pollPad(); kbRamp(dt); gyro.tick();
+  const c = myCar(), T = S.tel[S.car] || {}, mine = driving(), fresh = now - S.lastTelAt < 1000;
+  let rpm, load, limiter, gearTxt, simOn, vNow;
+  if (mine) {
+    const out = drive.step(dt, drive.mode === 'direct' ? S.thIn : thShape(S.thIn));
+    if (drive.mode !== 'direct') { S.th = c.flipped ? 0 : out; pushInput(); }
+    simOn = drive.mode !== 'direct'; rpm = drive.rpm; load = drive.load; limiter = drive.limiter; gearTxt = drive.label();
+    vNow = simOn ? drive.v : (fresh && T.oth != null ? T.oth : S.th);
+  } else if (T.drv && fresh) {
+    // 观战：用司机手机上模拟的转速和挡位，大家听到同一台发动机
+    const d = T.drv; simOn = !!d.md && d.md !== 'direct';
+    rpm = simOn ? d.rpm : IDLE + Math.abs(T.oth || 0) * (RED - IDLE); load = Math.abs(T.oth || 0); limiter = simOn && rpm >= RED * .99;
+    gearTxt = d.g === -1 ? 'R' : d.g === 0 ? 'N' : String(d.g); vNow = T.oth || 0;
+  } else {
+    drive.step(dt, 0); simOn = drive.mode !== 'direct'; rpm = drive.rpm; load = 0; limiter = false; gearTxt = drive.label(); vNow = 0;
+  }
+  const dm = demoRpm(now);
+  if (dm && Math.abs(vNow) < .05) { rpm = dm.rpm; load = dm.load; }
+  const engOn = !!(c && c.online) && (mine || (T.drv && fresh)) || !!dm;
+  audio.engine(rpm, load, limiter, engOn);
+  audio.tyre(Math.max(0, Math.abs(mine ? S.st : (T.ost || 0)) * Math.abs(vNow) - .35) * 2);
+  audio.reverse(engOn && vNow < -.05);
+  drawDial(simOn, rpm, gearTxt, mine ? S.thIn : (T.oth || 0), Math.abs(vNow) * (simOn ? 186 : 30), limiter,
+    mine ? motorDuty(S.th, c && c.cfg) : (T.oth ? (c ? c.cfg.dmin : .3) + (1 - (c ? c.cfg.dmin : .3)) * Math.abs(T.oth) : 0));
+  if (simOn) drawLeds(rpm, limiter);
+  if (++tick % 2 === 0) renderHud();
+  if (tick % 15 === 0) renderMode();
+  if (view === '3d' && world.ok) world.frame(dt, fresh ? T : null, vNow, mine ? S.st : (T.ost || 0));
+  else drawPov(vNow);
+  drawG();
+  requestAnimationFrame(frame);
+}
+
+addEventListener('resize', layout); layout();
+renderMode(); setView(view);
+connect(); requestAnimationFrame(frame);
+try { if (navigator.wakeLock) navigator.wakeLock.request('screen').catch(() => {}); } catch {}
+</script>
+</body>
+</html>

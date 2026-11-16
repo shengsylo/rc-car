@@ -1,0 +1,83 @@
+{
+  "id": "T004",
+  "title": "保时捷 1:32 回力车改装",
+  "status": "active",
+  "created": "2026-11-16",
+  "summary": "用 owner 的保时捷 911 GT3 RSR 合金车壳做第一台原型车。",
+  "problem": "回力车只有发条后驱、固定前轮，要改成能遥控、能闭环、能 FPV。车内很挤。",
+  "idea": "后轴：N20 编码器 6V 1500rpm + 15T(3mm 黄铜) → 20T(2mm 塑料) 齿轮；车头：3.7g 舵机 + 3D 打印转向节；控制 ESP32-C3 + DRV8833 + MPU6050（或 1S ELRS 融合接收器，见 T007）；1S LAVA 580mAh 放原喇叭位；原厂 LED 接 ESP32。",
+  "proof": [],
+  "solution": "",
+  "path": [
+    {
+      "step": "拆车、照片估尺寸",
+      "status": "done"
+    },
+    {
+      "step": "卡尺实测：车头高度≥12mm、中间深度≥8mm、后轴直径、发条盒位高度≥14mm",
+      "status": "todo"
+    },
+    {
+      "step": "零件到货",
+      "status": "todo"
+    },
+    {
+      "step": "打印底盘/转向节/齿轮座",
+      "status": "todo"
+    },
+    {
+      "step": "装配接线",
+      "status": "todo"
+    },
+    {
+      "step": "固件移植 C3 + 闭环",
+      "status": "todo"
+    }
+  ],
+  "issues": [
+    {
+      "text": "后轴直径按 2mm 估，20T 齿轮是 2mm 孔，需实测确认",
+      "severity": "med",
+      "open": true
+    },
+    {
+      "text": "合金壳重，N20 加速偏软",
+      "severity": "low",
+      "open": true
+    },
+    {
+      "text": "车内会转的小方向盘在 1:32 难做",
+      "severity": "low",
+      "open": true
+    }
+  ],
+  "data": [
+    {
+      "k": "底盘长",
+      "v": "约 135mm",
+      "note": "照片估"
+    },
+    {
+      "k": "轴距",
+      "v": "约 80mm",
+      "note": "照片估"
+    },
+    {
+      "k": "内宽",
+      "v": "约 50mm",
+      "note": "照片估"
+    },
+    {
+      "k": "轮径",
+      "v": "约 20mm",
+      "note": "照片估"
+    },
+    {
+      "k": "电池",
+      "v": "70×15×6.5mm 14g",
+      "note": "BetaFPV LAVA II 580"
+    }
+  ],
+  "files": [],
+  "log": []
+}

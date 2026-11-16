@@ -1,0 +1,26 @@
+{
+  "1": {
+    "dmax": 1,
+    "dmin": 0.3,
+    "smax": 1,
+    "smin": 0.55,
+    "shold": 0.3,
+    "dinv": 1,
+    "sinv": 0,
+    "ramp": 0,
+    "scap": 1,
+    "sret": 80,
+    "sretp": 0.6,
+    "rdead": 60,
+    "vlim": 6.6,
+    "vcut": 6,
+    "bz": 0,
+    "bzlo": 0,
+    "bvol": 0.5,
+    "rvb": 1,
+    "smode": 1,
+    "pmin": 0.35,
+    "sc": 1500,
+    "sr": 400
+  }
+}
