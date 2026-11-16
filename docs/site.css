@@ -1,4 +1,4 @@
-/* xau-lab tracker — hand-authored design file shared by every generated page.
+/* rc-car tracker — design file shared by every generated page (from xau-lab; accent = underground red).
    One idea carried everywhere: a price path leaves the gold entry line and ends on a barrier —
    take-profit (green, above) or stop-out (red, below). The viewport itself sits between the two. */
 @view-transition { navigation: auto; }
@@ -14,7 +14,7 @@
   --grid: light-dark(oklch(0.2 0.02 262 / 0.05), oklch(1 0 0 / 0.035));
   --ink: light-dark(oklch(0.2 0.02 262), oklch(0.955 0.006 85));
   --mute: light-dark(oklch(0.44 0.02 262), oklch(0.74 0.015 262));
-  --gold: light-dark(oklch(0.52 0.12 72), oklch(0.85 0.15 88));
+  --gold: light-dark(oklch(0.55 0.2 27), oklch(0.68 0.22 27));   /* 名字沿用，颜色是赛车红 */
   --ok: light-dark(oklch(0.5 0.14 155), oklch(0.82 0.17 155));
   --bad: light-dark(oklch(0.52 0.2 25), oklch(0.75 0.18 25));
   --warn: light-dark(oklch(0.55 0.14 60), oklch(0.83 0.15 70));
@@ -289,3 +289,6 @@ li.empty { display: block; }
   .panel { padding: 20px; } .panel.half, .panel.w5, .panel.w7 { grid-column: span 12; } .log li { grid-template-columns: 1fr; gap: 0; }
   .cards { grid-template-columns: minmax(0, 1fr); }
 }
+
+.cta { margin: 14px 0 18px; } .studio-link { display: inline-block; padding: 10px 16px; border-radius: 12px; background: var(--gold); color: #fff; font-weight: 600; text-decoration: none; }
+.studio-link:hover { filter: brightness(1.1); }

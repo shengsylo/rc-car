@@ -38,7 +38,13 @@
       "status": "todo"
     }
   ],
-  "issues": [],
+  "issues": [
+    {
+      "text": "owners 表跟 xau-lab 共用：rc-car 的登录账号也能看 xau-lab 的任务（反过来也一样）。要分开就给 tasks 加一列项目再改 RLS。",
+      "severity": "low",
+      "open": true
+    }
+  ],
   "data": [],
   "files": [
     "tools/tracker.py",
@@ -53,6 +59,10 @@
     {
       "at": "2026-11-16",
       "text": "加 GitHub Pages：`sh tools/publish.sh`（Mac 上跑）→ 公开 repo `shengsylo/rc-car-route`，根目录任务板登录壳，`/studio/` 是 RC Studio 网页演示版（项目/零件库只读数据，改动存浏览器）。私有 repo 不公开。"
+    },
+    {
+      "at": "2026-11-16",
+      "text": "网站去掉 xau-lab 的黄金页面：标题「RC 地下赛车 · 任务板」、赛车红、去掉随机游走动画、加「打开 RC Studio 3D」按钮。登录改用户名（`lotion` → `lotion@rc-car.local`），`python3 tools/sb.py add-login lotion` 建账号。Supabase 密码最少 6 位，`123` 不行。"
     }
   ]
 }

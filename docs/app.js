@@ -1,4 +1,4 @@
-/* xau-lab private content client. Dependency-free, no build step.
+/* rc-car private content client (same code as xau-lab). Dependency-free, no build step.
    The static site holds no research content: after an email + password sign-in against Supabase Auth,
    tasks and live status are read from Postgres through PostgREST (row level security: owners only)
    and rendered here. Everything that comes back from the database is treated as untrusted text. */
@@ -305,7 +305,7 @@
   function clear() { if (page === 'task') clearTask(); else clearIndex(); }
 
   /* ---------- index: cards + live jobs ---------- */
-  const TITLE = '黄金概率实验';
+  const TITLE = 'RC 地下赛车 · 任务板';
   let liveOn = false, stamp = NaN, shown = '';
   function clearIndex() {
     liveOn = false; stamp = NaN; shown = '';
@@ -414,8 +414,10 @@
   if (form) form.addEventListener('submit', async e => {
     e.preventDefault(); // credentials only ever travel in the POST body to Supabase Auth
     if (!cfg) return msg(configError);
-    const email = form.elements.email.value.trim(), password = form.elements.password.value;
-    if (!email || !password) return msg('请输入邮箱和密码。');
+    // 用户名（没有 @）= 用户名@rc-car.local（tools/sb.py add-login 建的账号）；也可以直接打邮箱
+    const name = form.elements.email.value.trim(), password = form.elements.password.value;
+    if (!name || !password) return msg('请输入用户名和密码。');
+    const email = name.includes('@') ? name : name.toLowerCase() + '@rc-car.local';
     const btn = $('button[type="submit"]', form);
     btn.disabled = true; btn.textContent = '登录中…'; msg('');
     try {
@@ -424,7 +426,7 @@
       load();
     } catch (err) {
       const k = err && err.kind;
-      msg(k === 'cred' ? '邮箱或密码不对。' : k === 'unconfirmed' ? '这个邮箱还没确认。' : k === 'rate' ? '尝试太频繁，稍后再试。' :
+      msg(k === 'cred' ? '用户名或密码不对。' : k === 'unconfirmed' ? '这个账号还没确认。' : k === 'rate' ? '尝试太频繁，稍后再试。' :
         k === 'net' ? '连不上服务器，请检查网络。' : '登录失败（HTTP ' + httpCode(err && err.status) + '）。');
     } finally { btn.disabled = false; btn.textContent = '登录'; }
   });

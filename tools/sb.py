@@ -200,7 +200,49 @@ def add_owner():
     return 0
 
 
+def add_login(name=None):
+    """Interactive: create a username login for the website (username = <name>@rc-car.local) and list it in owners.
+    Supabase needs passwords of at least 6 characters. The password is typed here and sent straight to Supabase."""
+    import getpass, re
+    if not sys.stdin.isatty():
+        raise SbError("add-login must be run by hand in a terminal")
+    name = (name or input("用户名（网站登录用，例如 lotion）: ")).strip().lower()
+    if not re.fullmatch(r"[a-z0-9._-]{2,32}", name):
+        raise SbError("用户名只能用小写字母、数字、. _ -")
+    pw = getpass.getpass("密码（至少 6 位，输入时不显示）: ")
+    if len(pw) < 6:
+        raise SbError("密码太短：Supabase 规定至少 6 位")
+    if pw != getpass.getpass("再输入一次密码: "):
+        raise SbError("两次密码不一样")
+    env = load_env()
+    key = need(env, "SUPABASE_SECRET_KEY")
+    req = urllib.request.Request(
+        need(env, "SUPABASE_URL").rstrip("/") + "/auth/v1/admin/users", method="POST",
+        data=json.dumps({"email": f"{name}@rc-car.local", "password": pw, "email_confirm": True}).encode("utf-8"),
+        headers={"apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "User-Agent": "rc-car-tools"})
+    try:
+        with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            uid = json.loads(r.read())["id"]
+    except urllib.error.HTTPError as e:
+        try:
+            err = json.loads(e.read() or b"{}")
+        except ValueError:
+            err = {}
+        raise SbError(f"建账号失败: HTTP {e.code} {str(err.get('msg') or err.get('message') or '')[:160]}") from None
+    except (urllib.error.URLError, TimeoutError, OSError) as e:
+        raise SbError(f"建账号失败: Supabase 连不上 ({type(getattr(e, 'reason', e)).__name__})") from None
+    request("POST", "owners", [{"user_id": uid}], prefer="return=minimal")
+    print(f"完成：网站用「{name}」+ 你的密码登录。")
+    return 0
+
+
 def main(argv):
+    if len(argv) > 1 and argv[1] == "add-login":
+        try:
+            return add_login(argv[2] if len(argv) > 2 else None)
+        except SbError as e:
+            print(e)
+            return 1
     if len(argv) > 1 and argv[1] == "add-owner":
         try:
             return add_owner()
