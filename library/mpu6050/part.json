@@ -1,0 +1,83 @@
+{
+ "name": "MPU6050 GY-521",
+ "kind": "sensor",
+ "size": [
+  21,
+  16,
+  3
+ ],
+ "color": "#1d3f8f",
+ "pins": [
+  {
+   "id": "VCC",
+   "x": -8.9,
+   "y": -6.5,
+   "type": "power_in",
+   "v": [
+    3,
+    5.5
+   ]
+  },
+  {
+   "id": "GND",
+   "x": -6.36,
+   "y": -6.5,
+   "type": "gnd"
+  },
+  {
+   "id": "SCL",
+   "x": -3.82,
+   "y": -6.5,
+   "type": "logic_in",
+   "fw": "SCL",
+   "v": [
+    0,
+    3.3
+   ],
+   "need": [
+    "i2c"
+   ]
+  },
+  {
+   "id": "SDA",
+   "x": -1.28,
+   "y": -6.5,
+   "type": "logic_io",
+   "fw": "SDA",
+   "v": [
+    0,
+    3.3
+   ],
+   "need": [
+    "i2c"
+   ]
+  },
+  {
+   "id": "XDA",
+   "x": 1.26,
+   "y": -6.5,
+   "type": "nc"
+  },
+  {
+   "id": "XCL",
+   "x": 3.8,
+   "y": -6.5,
+   "type": "nc"
+  },
+  {
+   "id": "AD0",
+   "x": 6.34,
+   "y": -6.5,
+   "type": "nc"
+  },
+  {
+   "id": "INT",
+   "x": 8.88,
+   "y": -6.5,
+   "type": "nc"
+  }
+ ],
+ "verified": true,
+ "drawmA": 4,
+ "shape": "box"
+}

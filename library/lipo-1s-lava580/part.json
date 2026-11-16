@@ -1,0 +1,32 @@
+{
+ "name": "BetaFPV LAVA 1S 580mAh（BT2.0）",
+ "kind": "battery",
+ "size": [
+  13,
+  58,
+  10
+ ],
+ "color": "#e8a500",
+ "verified": false,
+ "pins": [
+  {
+   "id": "B+",
+   "x": -2,
+   "y": -29,
+   "type": "power_src",
+   "v": [
+    3.3,
+    4.35
+   ]
+  },
+  {
+   "id": "B-",
+   "x": 2,
+   "y": -29,
+   "type": "gnd"
+  }
+ ],
+ "maxA": 50,
+ "note": "LiHV 满电 4.35V。尺寸是估计，到货量。",
+ "shape": "box"
+}

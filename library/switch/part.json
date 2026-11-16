@@ -1,0 +1,27 @@
+{
+ "name": "拨动开关",
+ "kind": "io",
+ "size": [
+  8.5,
+  4,
+  4
+ ],
+ "color": "#777",
+ "verified": false,
+ "pins": [
+  {
+   "id": "IN",
+   "x": -2.54,
+   "y": 0,
+   "type": "pass"
+  },
+  {
+   "id": "OUT",
+   "x": 2.54,
+   "y": 0,
+   "type": "pass"
+  }
+ ],
+ "note": "串在电池正极。",
+ "shape": "box"
+}

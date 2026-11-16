@@ -25,6 +25,8 @@
 #include <Wire.h>
 #include <esp_system.h>
 #include <HTTPUpdate.h>
+#include <Preferences.h>
+#include <esp_ota_ops.h>
 
 // ================== 配置（flash.sh 会自动填） ==================
 const char* WIFI_SSID   = "你的WiFi名称";
@@ -33,24 +35,93 @@ const int   CAR_ID    = 1;
 const char* SERVER_HOST = "";        // Mac 的 mDNS 名字（不带 .local），flash.sh 自动填
 const char* SERVER_IP   = "";        // Mac 的 IP，mDNS 失败时备用，flash.sh 自动填
 const int   SERVER_PORT = 8080;
-const char* FW_VERSION  = "0.5.0";
+const char* FW_VERSION  = "0.6.0";
 
-// L298N
-const int PIN_ENA = 25, PIN_IN1 = 26, PIN_IN2 = 27;   // 驱动
-const int PIN_ENB = 14, PIN_IN3 = 32, PIN_IN4 = 33;   // 转向
+// 运行时配置：从 NVS 读（配网写入），bin 里不再有密码。上面的常量只是旧版 flash.sh 的后备值
+Preferences prefs;
+char cfgSsid[33] = "", cfgPass[65] = "", cfgHost[33] = "", cfgIp[40] = "", cfgOtaPw[33] = "";
+int  carId = 1;
+bool provisioned = false;
+
+// ---- 引脚：按板子自动选默认值；Studio 会根据接线图生成 pins.h 覆盖 ----
+#if __has_include("pins.h")
+#include "pins.h"
+#endif
+#if CONFIG_IDF_TARGET_ESP32C3
+  // ESP32-C3 SuperMini + DRV8833 + 舵机（保时捷小车）
+  #ifndef RC_DRIVER
+  #define RC_DRIVER 2          // 1 = L298N（EN+IN1/IN2，转向电机）  2 = DRV8833（IN1/IN2 都是 PWM，转向用舵机）
+  #endif
+  #ifndef RC_PIN_IN1
+  #define RC_PIN_IN1 3
+  #define RC_PIN_IN2 4
+  #endif
+  #ifndef RC_PIN_SERVO
+  #define RC_PIN_SERVO 5
+  #endif
+  #ifndef RC_PIN_SDA
+  #define RC_PIN_SDA 8
+  #define RC_PIN_SCL 9
+  #endif
+  #ifndef RC_PIN_BUZ
+  #define RC_PIN_BUZ 10
+  #endif
+  #ifndef RC_PIN_BATT
+  #define RC_PIN_BATT 0
+  #endif
+#endif
+#ifndef RC_DRIVER
+#define RC_DRIVER 1
+#endif
+#ifndef RC_PIN_ENA
+#define RC_PIN_ENA 25
+#endif
+#ifndef RC_PIN_IN1
+#define RC_PIN_IN1 26
+#define RC_PIN_IN2 27
+#endif
+#ifndef RC_PIN_ENB
+#define RC_PIN_ENB 14
+#define RC_PIN_IN3 32
+#define RC_PIN_IN4 33
+#endif
+#ifndef RC_PIN_SDA
+#define RC_PIN_SDA 21
+#define RC_PIN_SCL 22
+#endif
+#ifndef RC_PIN_BATT
+#define RC_PIN_BATT 34
+#endif
+#ifndef RC_PIN_BUZ
+#define RC_PIN_BUZ 13
+#endif
+#ifndef RC_PIN_SERVO
+#define RC_PIN_SERVO 18
+#endif
+#ifndef RC_BATT_SENSE
+#define RC_BATT_SENSE false
+#endif
+#ifndef RC_BATT_DIVIDER
+#define RC_BATT_DIVIDER ((22.0 + 10.0) / 10.0)
+#endif
+#define STEER_MOTOR (RC_DRIVER == 1)   // 只有 L298N 板有转向电机，其他一律舵机
+
+// L298N（RC_DRIVER 1）
+const int PIN_ENA = RC_PIN_ENA, PIN_IN1 = RC_PIN_IN1, PIN_IN2 = RC_PIN_IN2;   // 驱动
+const int PIN_ENB = RC_PIN_ENB, PIN_IN3 = RC_PIN_IN3, PIN_IN4 = RC_PIN_IN4;   // 转向
 
 // MPU6050（可选，没接也能跑）
-int PIN_SDA = 21, PIN_SCL = 22;   // 开机会自动试 21/22 和 22/21（接反了也能用）
+int PIN_SDA = RC_PIN_SDA, PIN_SCL = RC_PIN_SCL;   // 开机会自动试正反两种接法
 
-// 电池电压（可选）：开关后的电池+ ─22kΩ─ D34 ─10kΩ─ GND
-const bool  BATT_SENSE   = false;     // 接好 22k/10k 电阻后改成 true；没接时千万别开（空脚会乱读）
-const int   PIN_BATT     = 34;
-const float BATT_DIVIDER = (22.0 + 10.0) / 10.0;   // 用别的电阻就改这里：(R上+R下)/R下
+// 电池电压（可选）：开关后的电池+ ─22kΩ─ ADC ─10kΩ─ GND
+const bool  BATT_SENSE   = RC_BATT_SENSE;     // 接好电阻后在 pins.h 里定义 RC_BATT_SENSE true
+const int   PIN_BATT     = RC_PIN_BATT;
+const float BATT_DIVIDER = RC_BATT_DIVIDER;
 
-// 蜂鸣器（可选）：模块的 I/O(或 S) 接 D13，VCC 接 3V3，GND 接 GND。没接也不影响
-const int PIN_BUZ = 13;
-// 舵机转向（可选）：舵机信号线（橙/黄）接 D18，红线接 5V（ESP32 的 VIN），棕线接 GND。设置里选「舵机」才会输出
-const int PIN_SERVO = 18;
+// 蜂鸣器（可选）
+const int PIN_BUZ = RC_PIN_BUZ;
+// 舵机转向：信号线接 PIN_SERVO
+const int PIN_SERVO = RC_PIN_SERVO;
 
 const uint32_t FAILSAFE_MS = 500;
 const uint32_t TELEM_MS    = 50;
@@ -80,7 +151,7 @@ int   cfgBz     = 0;        // 蜂鸣器：0 关（默认，声音在手机上�
 bool  cfgBzLo   = false;    // 低电平触发的模块（不响或一直响就切换这个）
 float cfgBVol   = 0.5;      // 音量（无源蜂鸣器用占空比调，0–1）
 bool  cfgRevBeep = true;    // 倒车嘀嘀
-int   cfgSteerMode = 1;     // 转向：0 打到底（原来的）/ 1 比例（电机力度对抗回中弹簧，歪一点转一点）/ 2 舵机
+int   cfgSteerMode = STEER_MOTOR ? 1 : 2;     // 转向：0 打到底（原来的）/ 1 比例（电机力度对抗回中弹簧，歪一点转一点）/ 2 舵机
 float cfgPMin   = 0.35;     // 比例模式：轮子刚好开始转的力度
 float cfgServoC = 1500;     // 舵机中位（微秒）
 float cfgServoR = 400;      // 舵机行程（微秒，单边）
@@ -91,7 +162,12 @@ const uint32_t STEER_PUSH_MS = 300;
 int   steerDir = 0; uint32_t steerSince = 0;
 const float DEADZONE = 0.06;
 
-const int PWM_FREQ = 2000, PWM_BITS = 10, PWM_MAX = (1 << PWM_BITS) - 1;
+#if RC_DRIVER == 2
+const int PWM_FREQ = 20000,   // DRV8833：20kHz 听不到啸叫，低速更顺
+#else
+const int PWM_FREQ = 2000,
+#endif
+          PWM_BITS = 10, PWM_MAX = (1 << PWM_BITS) - 1;
 
 WebSocketsClient ws;
 bool     wsUp       = false;
@@ -200,7 +276,11 @@ const int BZ_CH = 4, BZ_BITS = 10, BZ_MAX = (1 << BZ_BITS) - 1;
 
 void bzSetup() {
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
+  #if CONFIG_IDF_TARGET_ESP32C3
+  ledcAttach(PIN_BUZ, 2000, BZ_BITS);
+  #else
   ledcAttachChannel(PIN_BUZ, 2000, BZ_BITS, BZ_CH);   // 通道 4（定时器 2），不和电机的 PWM 抢
+  #endif
 #else
   ledcSetup(BZ_CH, 2000, BZ_BITS); ledcAttachPin(PIN_BUZ, BZ_CH);
 #endif
@@ -327,20 +407,46 @@ void soundTick() {
 }
 
 // ---------------- 电机 ----------------
+// 驱动电机 A：dir 1 前 / -1 后 / 0 滑行；duty 0–1
+void motorA(int dir, float duty) {
+  int d = (int)(constrain(duty, 0, 1) * PWM_MAX);
+#if RC_DRIVER == 2
+  if (dir > 0)      { pwmWrite(PIN_IN1, 0, d); pwmWrite(PIN_IN2, 1, 0); }
+  else if (dir < 0) { pwmWrite(PIN_IN1, 0, 0); pwmWrite(PIN_IN2, 1, d); }
+  else              { pwmWrite(PIN_IN1, 0, 0); pwmWrite(PIN_IN2, 1, 0); }
+#else
+  digitalWrite(PIN_IN1, dir > 0 ? HIGH : LOW);
+  digitalWrite(PIN_IN2, dir < 0 ? HIGH : LOW);
+  pwmWrite(PIN_ENA, 0, dir ? d : 0);
+#endif
+}
+void motorABrake() {
+#if RC_DRIVER == 2
+  pwmWrite(PIN_IN1, 0, PWM_MAX); pwmWrite(PIN_IN2, 1, PWM_MAX);
+#else
+  digitalWrite(PIN_IN1, HIGH); digitalWrite(PIN_IN2, HIGH); pwmWrite(PIN_ENA, 0, PWM_MAX);
+#endif
+}
+void steerOff() {
+#if STEER_MOTOR
+  digitalWrite(PIN_IN3, LOW); digitalWrite(PIN_IN4, LOW); pwmWrite(PIN_ENB, 1, 0);
+#endif
+}
 void driveOut(float v) {
   outTh = v;
-  if (fabs(v) < 0.001) { digitalWrite(PIN_IN1, LOW); digitalWrite(PIN_IN2, LOW); pwmWrite(PIN_ENA, 0, 0); return; }
+  if (fabs(v) < 0.001) { motorA(0, 0); return; }
   float hw = cfgDriveInv ? -v : v;
-  digitalWrite(PIN_IN1, hw > 0 ? HIGH : LOW);
-  digitalWrite(PIN_IN2, hw > 0 ? LOW : HIGH);
   float d = cfgDriveMin + (1.0 - cfgDriveMin) * fabs(v);
-  pwmWrite(PIN_ENA, 0, (int)(constrain(d, 0, 1) * PWM_MAX));
+  motorA(hw > 0 ? 1 : -1, d);
 }
 void brake() {
   outTh = 0; driveTarget = 0; driveCur = 0;
-  digitalWrite(PIN_IN1, HIGH); digitalWrite(PIN_IN2, HIGH); pwmWrite(PIN_ENA, 0, PWM_MAX);
+  motorABrake();
 }
 void steerHw(int dir, float duty) {          // 直接驱动转向电机（dir = -1 左 / 1 右，已处理反向设置）
+#if !STEER_MOTOR
+  return;
+#endif
   int hw = cfgSteerInv ? -dir : dir;
   digitalWrite(PIN_IN3, hw < 0 ? HIGH : LOW);
   digitalWrite(PIN_IN4, hw < 0 ? LOW : HIGH);
@@ -349,15 +455,23 @@ void steerHw(int dir, float duty) {          // 直接驱动转向电机（dir =
 void servoOut(float s) {
   if (!servoOn) {
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
+  #if CONFIG_IDF_TARGET_ESP32C3
+    ledcAttach(PIN_SERVO, 50, 14);          // C3 只有 6 个通道，自动分配；14 位是 C3 在 50Hz 的上限
+  #else
     ledcAttachChannel(PIN_SERVO, 50, 16, 6);
+  #endif
 #else
     ledcSetup(6, 50, 16); ledcAttachPin(PIN_SERVO, 6);
 #endif
     servoOn = true;
-    digitalWrite(PIN_IN3, LOW); digitalWrite(PIN_IN4, LOW); pwmWrite(PIN_ENB, 1, 0);   // 原来的转向电机断电
+    steerOff();   // 原来的转向电机断电
   }
   float us = cfgServoC + constrain(cfgSteerInv ? -s : s, -1, 1) * cfgServoR * cfgSteerMax;
+#if CONFIG_IDF_TARGET_ESP32C3
+  int duty = (int)(constrain(us, 500, 2500) / 20000.0 * 16383);
+#else
   int duty = (int)(constrain(us, 500, 2500) / 20000.0 * 65535);
+#endif
 #if ESP_ARDUINO_VERSION_MAJOR >= 3
   ledcWrite(PIN_SERVO, duty);
 #else
@@ -367,7 +481,7 @@ void servoOut(float s) {
 
 void steerOut(float s) {
   outSt = s;
-  if (cfgSteerMode == 2) { servoOut(s); steerDir = 0; retDir = 0; return; }
+  if (cfgSteerMode == 2 || !STEER_MOTOR) { servoOut(s); steerDir = 0; retDir = 0; return; }
   // 比例模式：小输入 = 小力度，弹簧把轮子拉回一部分，所以轮子只转一点
   const float dz = cfgSteerMode == 1 ? 0.04 : 0.15;
   if (fabs(s) < dz) {
@@ -376,7 +490,7 @@ void steerOut(float s) {
     steerDir = 0; outSt = 0;
     if (retDir != 0 && (int32_t)(retUntil - millis()) > 0) { steerHw(retDir, cfgRetPow); return; }
     retDir = 0;
-    digitalWrite(PIN_IN3, LOW); digitalWrite(PIN_IN4, LOW); pwmWrite(PIN_ENB, 1, 0);   // 断电滑行，弹簧拉回中间
+    steerOff();   // 断电滑行，弹簧拉回中间
     return;
   }
   retDir = 0;
@@ -410,7 +524,7 @@ void driveRamp() {
   if (driveCur != 0 && target != 0 && (target > 0) != (driveCur > 0) && cfgRevDead > 0) { revUntil = now + (uint32_t)cfgRevDead; driveCur = 0; }
   if ((int32_t)(revUntil - now) > 0) {
     if (target == 0) { revUntil = 0; }
-    else { digitalWrite(PIN_IN1, HIGH); digitalWrite(PIN_IN2, HIGH); pwmWrite(PIN_ENA, 0, PWM_MAX); outTh = 0; return; }
+    else { motorABrake(); outTh = 0; return; }
   }
   if (driveCur != 0 && (target == 0 || (target > 0) != (driveCur > 0))) driveCur = 0;   // 换方向先归零
   if (fabs(target) <= fabs(driveCur) || cfgRampMs < 1) driveCur = target;               // 减速立刻
@@ -537,11 +651,11 @@ void sendHello() {
   snprintf(buf, sizeof(buf),
     "{\"t\":\"hello\",\"car\":%d,\"fw\":\"%s\",\"ip\":\"%s\",\"mac\":\"%s\",\"imu\":%s,\"batt\":%s,"
     "\"rst\":\"%s\",\"up\":%lu,\"wdn\":%lu,\"wdr\":%d,\"wsdn\":%lu,\"fsn\":%lu,\"rssi\":%d,"
-    "\"i2c\":\"%s\",\"chip\":\"%s\",\"snd\":1}",
-    CAR_ID, FW_VERSION, WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str(),
+    "\"i2c\":\"%s\",\"chip\":\"%s\",\"soc\":\"%s\",\"snd\":1}",
+    carId, FW_VERSION, WiFi.localIP().toString().c_str(), WiFi.macAddress().c_str(),
     imuOk ? "true" : "false", BATT_SENSE ? "true" : "false",
     bootReason, (unsigned long)millis(), (unsigned long)wifiDiscCount, wifiLastReason,
-    (unsigned long)wsDiscCount, (unsigned long)fsCount, WiFi.RSSI(), i2cFound, imuChip);
+    (unsigned long)wsDiscCount, (unsigned long)fsCount, WiFi.RSSI(), i2cFound, imuChip, CONFIG_IDF_TARGET);
   ws.sendTXT(buf);
 }
 
@@ -621,6 +735,7 @@ void onWs(WStype_t type, uint8_t* payload, size_t len) {
   switch (type) {
     case WStype_CONNECTED:
       wsUp = true; lastUpMs = millis();
+      if (prefs.getUChar("otap", 0)) { prefs.putUChar("otap", 0); prefs.putUChar("otab", 0); Serial.println("RC:OTA OK 新固件已确认"); }
       Serial.printf("已连上服务器 %s\n", serverAddr.c_str());
       sendHello();
       SFX(SFX_ONLINE);
@@ -712,11 +827,11 @@ void onWs(WStype_t type, uint8_t* payload, size_t len) {
 // ---------------- 找服务器 ----------------
 void connectServer() {
   serverAddr = "";
-  if (strlen(SERVER_HOST) > 0) {
-    IPAddress ip = MDNS.queryHost(String(SERVER_HOST), 1500);
+  if (strlen(cfgHost) > 0) {
+    IPAddress ip = MDNS.queryHost(String(cfgHost), 1500);
     if (ip != IPAddress(0, 0, 0, 0)) serverAddr = ip.toString();
   }
-  if (serverAddr.length() == 0) serverAddr = SERVER_IP;
+  if (serverAddr.length() == 0) serverAddr = cfgIp;
   if (serverAddr.length() == 0) { Serial.println("没有服务器地址，用 flash.sh 烧录会自动填"); lastResolve = millis(); return; }
   if (WiFi.status() != WL_CONNECTED) { lastResolve = millis(); return; }   // WiFi 没连上，先不连服务器
   Serial.printf("连接服务器 %s:%d …\n", serverAddr.c_str(), SERVER_PORT);
@@ -742,12 +857,12 @@ const char* wifiReason(int st) {
 
 void printWifiInfo() {
   // 密码只显示头尾，日志可能会存文件发给别人
-  String pw = WIFI_PASS, shown;
+  String pw = cfgPass, shown;
   if (pw.length() <= 2) shown = "**";
   else { shown = pw.substring(0, 1); for (size_t i = 1; i + 1 < pw.length(); i++) shown += "*"; shown += pw.substring(pw.length() - 1); }
-  Serial.printf("WiFi 名称：「%s」\n", WIFI_SSID);
+  Serial.printf("WiFi 名称：「%s」\n", cfgSsid);
   Serial.printf("WiFi 密码：%s（%u 位）\n", shown.c_str(), (unsigned)pw.length());
-  Serial.printf("服务器：%s.local / %s:%d\n", SERVER_HOST, SERVER_IP, SERVER_PORT);
+  Serial.printf("服务器：%s.local / %s:%d\n", cfgHost, cfgIp, SERVER_PORT);
 }
 
 void startWifi() {
@@ -758,8 +873,8 @@ void startWifi() {
     wifiLastReason = info.wifi_sta_disconnected.reason;
   }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
   printWifiInfo();
-  if (strstr(WIFI_SSID, "你的WiFi")) Serial.println("WiFi 名称还是默认值，没填进来：请用 flash.sh 烧录（它会自动填）");
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  if (!provisioned) Serial.println("还没配网：在 RC Studio 里点「配网」，或插 USB 用串口发 prov");
+  WiFi.begin(cfgSsid, cfgPass);
   Serial.print("连接 WiFi ");
   uint32_t t0 = millis();
   while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) { delay(300); Serial.print("."); }
@@ -768,31 +883,113 @@ void startWifi() {
   else
     Serial.printf("\nWiFi 连不上（%s），会继续重试\n", wifiReason(WiFi.status()));
   WiFi.setAutoReconnect(true);
-  char host[16]; snprintf(host, sizeof(host), "car%d", CAR_ID);
+  char host[16]; snprintf(host, sizeof(host), "car%d", carId);
   MDNS.begin(host);
   ArduinoOTA.setHostname(host);
+  if (cfgOtaPw[0]) ArduinoOTA.setPassword(cfgOtaPw);   // 没密码的话局域网里谁都能刷你的车
   ArduinoOTA.onStart([]() { failsafe = true; apply(); musicStop(); bzOut(0); });
   ArduinoOTA.begin();
+}
+
+// ---------------- 配置（NVS）+ 串口配网 ----------------
+void loadNvs() {
+  prefs.begin("rc", false);
+  String v;
+  v = prefs.getString("ssid", ""); strlcpy(cfgSsid, v.c_str(), sizeof(cfgSsid));
+  v = prefs.getString("pass", ""); strlcpy(cfgPass, v.c_str(), sizeof(cfgPass));
+  v = prefs.getString("host", ""); strlcpy(cfgHost, v.c_str(), sizeof(cfgHost));
+  v = prefs.getString("ip", "");   strlcpy(cfgIp, v.c_str(), sizeof(cfgIp));
+  v = prefs.getString("otapw", ""); strlcpy(cfgOtaPw, v.c_str(), sizeof(cfgOtaPw));
+  carId = prefs.getInt("car", CAR_ID);
+  provisioned = cfgSsid[0] != 0;
+  if (!provisioned && !strstr(WIFI_SSID, "你的WiFi") && WIFI_SSID[0]) {   // 旧版 flash.sh 编进来的值（过渡用）
+    strlcpy(cfgSsid, WIFI_SSID, sizeof(cfgSsid)); strlcpy(cfgPass, WIFI_PASS, sizeof(cfgPass));
+    strlcpy(cfgHost, SERVER_HOST, sizeof(cfgHost)); strlcpy(cfgIp, SERVER_IP, sizeof(cfgIp));
+    provisioned = true;
+    // 存进 NVS：以后从 RC Studio 来的固件（不含密码）OTA 上来也能连 WiFi
+    prefs.putString("ssid", cfgSsid); prefs.putString("pass", cfgPass);
+    prefs.putString("host", cfgHost); prefs.putString("ip", cfgIp);
+  }
+}
+// OTA 后连续 3 次开机都没连上服务器 → 切回旧分区
+void otaRollbackCheck() {
+  if (!prefs.getUChar("otap", 0)) return;
+  uint8_t b = prefs.getUChar("otab", 0) + 1; prefs.putUChar("otab", b);
+  Serial.printf("RC:OTA 新固件第 %u 次开机，等连上服务器确认\n", b);
+  if (b <= 3) return;
+  const esp_partition_t* other = esp_ota_get_next_update_partition(NULL);
+  prefs.putUChar("otap", 0); prefs.putUChar("otab", 0);
+  if (other && esp_ota_set_boot_partition(other) == ESP_OK) { Serial.println("RC:OTA ROLLBACK 新固件连不上服务器，退回旧版"); delay(200); ESP.restart(); }
+}
+// 带转义的 JSON 字符串读取（密码里可能有引号）
+bool jstrEsc(const char* s, const char* k, char* out, size_t n) {
+  char p[24]; snprintf(p, sizeof(p), "\"%s\":\"", k); const char* q = strstr(s, p);
+  if (!q) { out[0] = 0; return false; }
+  q += strlen(p); size_t i = 0;
+  while (*q && *q != '"' && i < n - 1) { if (*q == '\\' && q[1]) q++; out[i++] = *q++; }
+  out[i] = 0; return true;
+}
+void printInfo(const char* tag) {
+  Serial.printf("RC:%s {\"fw\":\"%s\",\"car\":%d,\"mac\":\"%s\",\"soc\":\"%s\",\"prov\":%d,\"ssid\":\"%s\",\"ip\":\"%s\",\"drv\":%d}\n",
+    tag, FW_VERSION, carId, WiFi.macAddress().c_str(), CONFIG_IDF_TARGET, provisioned ? 1 : 0, cfgSsid,
+    WiFi.status() == WL_CONNECTED ? WiFi.localIP().toString().c_str() : "", RC_DRIVER);
+}
+char serLine[320]; size_t serLen = 0;
+void serialPoll() {
+  while (Serial.available()) {
+    char c = Serial.read();
+    if (c == '\r') continue;
+    if (c != '\n') { if (serLen < sizeof(serLine) - 1) serLine[serLen++] = c; continue; }
+    serLine[serLen] = 0; serLen = 0;
+    const char* s = serLine;
+    if (s[0] != '{') continue;
+    if (jis(s, "prov")) {
+      char v[66];
+      if (!jstrEsc(s, "ssid", v, sizeof(v)) || !v[0]) { Serial.println("RC:PROV ERR 没有 ssid"); continue; }
+      prefs.putString("ssid", v);
+      jstrEsc(s, "pass", v, sizeof(v));  prefs.putString("pass", v);
+      jstrEsc(s, "host", v, sizeof(v));  prefs.putString("host", v);
+      jstrEsc(s, "ip", v, sizeof(v));    prefs.putString("ip", v);
+      jstrEsc(s, "otapw", v, sizeof(v)); prefs.putString("otapw", v);
+      if (jhas(s, "car")) prefs.putInt("car", (int)jnum(s, "car", 1));
+      Serial.println("RC:PROV OK 已保存，重启");
+      failsafe = true; apply(); delay(300); ESP.restart();
+    } else if (jis(s, "info")) printInfo("INFO");
+    else if (jis(s, "unprov")) { prefs.clear(); Serial.println("RC:UNPROV OK"); delay(300); ESP.restart(); }
+  }
 }
 
 void setup() {
   Serial.begin(115200);
   bootReason = resetReasonStr();
+  WiFi.mode(WIFI_STA);        // 先开 WiFi 外设，MAC 地址才读得到
+  loadNvs();
+  otaRollbackCheck();
   Serial.printf("\n=== 车开机，上次重启原因：%s %s ===\n", bootReason,
     !strcmp(bootReason, "BROWNOUT") ? "← 电压不够！电池没电或 5V 不稳" :
     !strcmp(bootReason, "PANIC") ? "← 程序崩溃" : !strcmp(bootReason, "WDT") ? "← 卡死" : "");
+#if RC_DRIVER == 2
+  pwmSetup(PIN_IN1, 0); pwmSetup(PIN_IN2, 1);
+#else
   pinMode(PIN_IN1, OUTPUT); pinMode(PIN_IN2, OUTPUT);
   pinMode(PIN_IN3, OUTPUT); pinMode(PIN_IN4, OUTPUT);
   pwmSetup(PIN_ENA, 0); pwmSetup(PIN_ENB, 1);
+#endif
   bzSetup(); bzOut(0);
   failsafe = true; apply();
   SFX(SFX_BOOT);
   { uint32_t t = millis(); while (millis() - t < 500) { soundTick(); delay(2); } }   // 开机音放完再连 WiFi
   if (BATT_SENSE) analogSetPinAttenuation(PIN_BATT, ADC_11db);
   imuInit();
+  if (!provisioned) {          // 没配网：等串口配网，电机保持刹停
+    Serial.println("RC:PROV? 还没配网，等 RC Studio 发配置（插着 USB）");
+    uint32_t t = 0;
+    while (!provisioned) { serialPoll(); if (millis() - t > 3000) { t = millis(); printInfo("PROV?"); } delay(10); }
+  }
   startWifi();
   connectServer();
-  Serial.printf("车 #%d 固件 %s 就绪\n", CAR_ID, FW_VERSION);
+  printInfo("READY");
+  Serial.printf("车 #%d 固件 %s 就绪\n", carId, FW_VERSION);
 }
 
 void doHttpOta() {
@@ -807,7 +1004,9 @@ void doHttpOta() {
     static int last = -1; int p = total > 0 ? (int)((int64_t)cur * 100 / total) : 0;
     if (p / 10 != last) { last = p / 10; Serial.printf("升级 %d%%\n", p); }
   });
+  prefs.putUChar("otap", 1); prefs.putUChar("otab", 0);       // 新固件连上服务器才算成功，否则 3 次开机后退回旧版
   t_httpUpdate_return r = httpUpdate.update(client, otaUrl);   // 成功会自动重启，不会走到下面
+  prefs.putUChar("otap", 0);
   String err = httpUpdate.getLastErrorString(); err.replace("\"", "'");
   Serial.printf("升级失败：%s\n", err.c_str());
   char buf[220]; snprintf(buf, sizeof(buf), "{\"t\":\"ota\",\"state\":\"fail\",\"err\":\"%s\",\"code\":%d}", err.c_str(), (int)r);
@@ -815,6 +1014,7 @@ void doHttpOta() {
 }
 
 void loop() {
+  serialPoll();
   ArduinoOTA.handle();
   ws.loop();
   if (otaPending) doHttpOta();
@@ -879,7 +1079,7 @@ void loop() {
         "{\"t\":\"tel\",\"car\":%d,\"seq\":%lu,\"up\":%lu,\"v\":%.2f,\"rssi\":%d,\"fs\":%s,"
         "\"oth\":%.2f,\"ost\":%.2f,\"cseq\":%lu,\"heap\":%u,\"imu\":\"%s\",\"bat\":\"%s\","
         "\"fsn\":%lu,\"gap\":%lu,\"wdn\":%lu,\"wdr\":%d,\"mu\":%d,\"hn\":%d",
-        CAR_ID, (unsigned long)++telSeq, (unsigned long)now, battV, WiFi.RSSI(),
+        carId, (unsigned long)++telSeq, (unsigned long)now, battV, WiFi.RSSI(),
         failsafe ? "true" : "false", outTh, outSt, (unsigned long)lastSeq, (unsigned)ESP.getFreeHeap(),
         imuStat, batStat, (unsigned long)fsCount, (unsigned long)ctlGapMax, (unsigned long)wifiDiscCount, wifiLastReason,
         musicOn ? 1 : 0, hornOn ? 1 : 0);

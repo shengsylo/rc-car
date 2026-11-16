@@ -17,6 +17,23 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { WebSocketServer } = require('ws');
+const crypto = require('crypto');
+const secrets = require('./lib/secrets');
+const SECRETS = secrets.load();
+const ADMIN_TOKEN = SECRETS.adminToken;
+// 编译版本库（RC Studio / tools/rc.js build 放进来的）：手机「升级」按钮用跟车同芯片的最新版
+const { BuildRegistry } = require('./lib/builds');
+const BUILDS = new BuildRegistry(__dirname);
+function readTargets() { try { return JSON.parse(fs.readFileSync(path.join(__dirname, 'targets.json'), 'utf8')); } catch { return {}; } }
+function latestBuildFor(c) {
+  if (!c || !c.soc) return null;
+  const T = readTargets();
+  return BUILDS.list().find(b => T[b.target] && T[b.target].soc === c.soc) || null;
+}
+// 一次性固件下载令牌：车 OTA 时才发，2 分钟过期（固件里虽然不再有密码，也不让外人随便下载）
+const otaTokens = new Map();   // token -> { file, exp }
+function isLoopback(a) { return a === '127.0.0.1' || a === '::1' || a === '::ffff:127.0.0.1'; }
+const ADMIN_MSGS = new Set(['selftest', 'selftest_stop', 'ota', 'calib', 'calib_clear', 'cfg']);
 
 const PORT = Number(process.env.PORT || 8080);
 const HTTPS_PORT = Number(process.env.HTTPS_PORT || 8443);   // 手机用陀螺仪转向要 https（start.sh 会自动做证书）
@@ -157,7 +174,7 @@ function carSummary(c) {
     id: c.id, online: c.online, fw: c.fw, ip: c.ip, sens: c.sens,
     driver: c.driver, driverName: c.driver ? (clients.get(c.driver) || {}).name : null,
     rtt: c.rtt, flipped: c.flipped, lowBatt: c.lowBatt, cfg: cfgFor(c.id),
-    i2c: c.i2c, chip: c.chip, fwAvail: (fwInfo() || {}).version || null, busy: c.busy || null,
+    i2c: c.i2c, chip: c.chip, soc: c.soc || '', fwAvail: (latestBuildFor(c) || {}).version || null, busy: c.busy || null,
     snd: c.snd, music: c.music, calib: calStore[c.id] ? { at: calStore[c.id].at, tilt: calStore[c.id].tilt, g: calStore[c.id].g } : null,
   };
 }
@@ -231,7 +248,7 @@ function onCarMessage(ws, m) {
       logEvent(ok ? 'ota_ok' : 'ota_fail', { car: id, msg: ok ? m.fw : '' });
       c.ota = null; c.busy = null;
     }
-    Object.assign(c, { ws, online: true, fw: m.fw, ip: m.ip, imu: !!m.imu, batt: !!m.batt, i2c: m.i2c || '', chip: m.chip || '', snd: !!m.snd, music: null, cal: null,
+    Object.assign(c, { ws, online: true, fw: m.fw, ip: m.ip, imu: !!m.imu, batt: !!m.batt, i2c: m.i2c || '', chip: m.chip || '', soc: m.soc || '', mac: m.mac || '', snd: !!m.snd, music: null, cal: null,
       srvAddr: String(ws._socket && ws._socket.localAddress || '').replace('::ffff:', '') });
     cars.set(id, c);
     ws.carId = id;
@@ -367,11 +384,33 @@ function release(cl, reason) {
   broadcastState();
 }
 
+function safeEq(a, b) { const x = Buffer.from(a), y = Buffer.from(b); return x.length === y.length && crypto.timingSafeEqual(x, y); }
+// 开始 OTA：file = 固件路径，version = 显示用版本。返回错误文字或 null
+function startOta(c, file, version, by) {
+  if (!c || !c.online) return '车不在线';
+  if (c.busy) return '车正忙（' + c.busy + '）';
+  if (c.driver) return '有人正在开，不能升级';
+  if (!c.srvAddr) return '不知道 Mac 的地址';
+  if (cmpVer(c.fw, '0.6.0') < 0) return `车上固件 ${c.fw} 太旧，没有配网功能：第一次升到 0.6 要插 USB，用 RC Studio「刷机 + 配网」`;
+  let size; try { size = fs.statSync(file).size; } catch { return '固件文件不见了：' + path.basename(file); }
+  const token = crypto.randomBytes(12).toString('base64url');
+  otaTokens.set(token, { file, exp: now() + 120000 });
+  const url = `http://${c.srvAddr}:${PORT}/fw/car.bin?k=${token}&v=${encodeURIComponent(version)}`;
+  c.ota = { from: c.fw, to: version, at: now() }; c.busy = 'ota';
+  send(c.ws, { t: 'ota', url });
+  diag('开始升级', c.id, `${c.fw} → ${version}`, { 发起: by, 大小: Math.round(size / 1024) + 'KB' });
+  broadcastState();
+  setTimeout(() => { if (c.ota && now() - c.ota.at >= 89000) { diag('升级失败', c.id, '90 秒没回来：车可能没电了，或者下载中断。再试一次；新固件连不上服务器的话，车开机 3 次后会自动退回旧版'); c.ota = null; c.busy = null; broadcastState(); } }, 90000);
+  return null;
+}
+
 function onUiMessage(cl, m) {
+  if (m.t === 'hello' && m.admin && safeEq(String(m.admin), ADMIN_TOKEN)) cl.admin = true;
+  if (ADMIN_MSGS.has(m.t) && !cl.admin) return send(cl.ws, { t: 'error', msg: '需要管理员权限：在 Mac 上打开网页，或用服务器终端里打印的「管理链接」' });
   switch (m.t) {
     case 'hello':
       cl.name = String(m.name || `玩家${cl.id}`).slice(0, 20);
-      send(cl.ws, { t: 'welcome', you: cl.id, name: cl.name, songs: SONGS, sfx: SFX_NAMES, httpsPort: httpsUp ? HTTPS_PORT : null });
+      send(cl.ws, { t: 'welcome', you: cl.id, admin: !!cl.admin, name: cl.name, songs: SONGS, sfx: SFX_NAMES, httpsPort: httpsUp ? HTTPS_PORT : null });
       broadcastState();
       break;
     case 'ping':
@@ -404,16 +443,11 @@ function onUiMessage(cl, m) {
         send(c.ws, { t: 'selftest' });
         logEvent('selftest', { car: c.id, msg: cl.name });
       } else {
-        const fw = fwInfo();
-        if (!fw) return send(cl.ws, { t: 'error', msg: 'Mac 上没有新固件：先跑 bash flash.sh --server' });
-        if (!c.srvAddr) return send(cl.ws, { t: 'error', msg: '不知道 Mac 的地址' });
-        const url = `http://${c.srvAddr}:${PORT}/fw/car.bin?v=${encodeURIComponent(fw.version)}`;
-        c.ota = { from: c.fw, to: fw.version, at: now() }; c.busy = 'ota';
-        send(c.ws, { t: 'ota', url });
-        diag('开始升级', c.id, `${c.fw} → ${fw.version}`, { 发起: cl.name, 大小: Math.round(fw.size / 1024) + 'KB' });
-        broadcastState();
-        // 90 秒还没回来 → 当作失败
-        setTimeout(() => { if (c.ota && now() - c.ota.at >= 89000) { diag('升级失败', c.id, '90 秒没回来：车可能没电了，或者下载中断。再试一次，不行就用 USB 烧'); c.ota = null; c.busy = null; broadcastState(); } }, 90000);
+        const b = latestBuildFor(c);
+        if (!b) return send(cl.ws, { t: 'error', msg: c.soc ? 'Mac 上没有这块芯片的固件：先在 RC Studio「固件」里编译' : '车上固件太旧：第一次要插 USB 用 RC Studio 一键装车' });
+        if (BUILDS.verify(b)) return send(cl.ws, { t: 'error', msg: '固件文件坏了：重新编译' });
+        const err = startOta(c, BUILDS.appBin(b), b.version, cl.name);
+        if (err) return send(cl.ws, { t: 'error', msg: err });
       }
       break;
     }
@@ -590,12 +624,18 @@ function onRequest(req, res) {
       res.end(buf);
     });
   } else if (url === '/fw/car.bin') {
-    const f = path.join(FW_DIR, 'car.bin');
-    fs.stat(f, (err, st) => {
+    const k = new URL(req.url, 'http://x').searchParams.get('k') || '';
+    const tok = otaTokens.get(k);
+    let f = null;
+    if (tok && tok.exp > now()) f = tok.file;
+    else if (isLoopback(req.socket.remoteAddress)) f = path.join(FW_DIR, 'car.bin');
+    if (!f) { res.writeHead(403); return res.end('forbidden'); }
+    fs.readFile(f, (err, buf) => {
       if (err) { res.writeHead(404); return res.end('no firmware'); }
-      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': st.size });
-      fs.createReadStream(f).pipe(res);
-      console.log(`[${new Date().toLocaleTimeString()}] 车正在下载固件 ${Math.round(st.size / 1024)}KB  ${req.socket.remoteAddress}`);
+      const md5 = crypto.createHash('md5').update(buf).digest('hex');   // 车端 HTTPUpdate 会校验 x-MD5，下载坏了就不刷
+      res.writeHead(200, { 'Content-Type': 'application/octet-stream', 'Content-Length': buf.length, 'x-MD5': md5 });
+      res.end(buf);
+      console.log(`[${new Date().toLocaleTimeString()}] 车正在下载固件 ${Math.round(buf.length / 1024)}KB  ${req.socket.remoteAddress}`);
     });
   } else if (url === '/fw/info.json') {
     res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(fwInfo()));
@@ -645,7 +685,9 @@ wssCar.on('connection', ws => {
 });
 
 wssUi.on('connection', (ws, req) => {
-  const cl = { id: nextClient++, ws, name: '', carId: null, ip: req.socket.remoteAddress };
+  const qAdmin = new URL(req.url, 'http://x').searchParams.get('admin') || '';
+  const cl = { id: nextClient++, ws, name: '', carId: null, ip: req.socket.remoteAddress,
+    admin: isLoopback(req.socket.remoteAddress) || (!!qAdmin && safeEq(qAdmin, ADMIN_TOKEN)) };
   clients.set(cl.id, cl);
   ws.on('message', buf => { let m; try { m = JSON.parse(buf); } catch { return; } onUiMessage(cl, m); });
   ws.on('close', () => {
@@ -678,5 +720,17 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log('\n RC 服务器已启动');
   for (const ip of lanIps()) console.log(`   手机/电脑打开： http://${ip}:${PORT}      （要用手机陀螺仪转向：https://${ip}:${HTTPS_PORT}）`);
   console.log(`   本机：          http://localhost:${PORT}`);
+  const ip0 = lanIps()[0];
+  if (ip0) console.log(`   管理链接（手机校准/自检/升级用，别发给别人）： http://${ip0}:${PORT}/?admin=${ADMIN_TOKEN}`);
   console.log('   等车连上…（Ctrl+C 关闭）\n');
 });
+
+setInterval(() => { const t = now(); for (const [k, v] of otaTokens) if (v.exp < t) otaTokens.delete(k); }, 30000);
+
+// ---------------- 管理平面（RC Studio，只绑 127.0.0.1） ----------------
+if (process.env.RC_NO_ADMIN !== '1') {
+  require('./admin').start({
+    cars, clients, carSummary, send, toUis, broadcastState, diag, logEvent, startOta, lanIps,
+    PORT, secrets: SECRETS, saveSecrets: () => secrets.save(SECRETS), FW_DIR,
+  });
+}

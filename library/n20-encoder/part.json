@@ -1,0 +1,70 @@
+{
+ "name": "N20 电机 6V 1500rpm + 霍尔编码器",
+ "kind": "motor",
+ "size": [
+  12,
+  34,
+  10
+ ],
+ "shape": "motor",
+ "color": "#c0c0c0",
+ "pins": [
+  {
+   "id": "M+",
+   "x": -3,
+   "y": -16,
+   "type": "motor_in",
+   "wire": "红"
+  },
+  {
+   "id": "M-",
+   "x": 3,
+   "y": -16,
+   "type": "motor_in",
+   "wire": "白"
+  },
+  {
+   "id": "EVCC",
+   "x": -4.5,
+   "y": -14,
+   "type": "power_in",
+   "v": [
+    3.3,
+    5
+   ],
+   "wire": "黑"
+  },
+  {
+   "id": "EGND",
+   "x": -1.5,
+   "y": -14,
+   "type": "gnd",
+   "wire": "蓝"
+  },
+  {
+   "id": "A",
+   "x": 1.5,
+   "y": -14,
+   "type": "logic_out",
+   "v": [
+    0,
+    3.3
+   ],
+   "wire": "绿"
+  },
+  {
+   "id": "B",
+   "x": 4.5,
+   "y": -14,
+   "type": "logic_out",
+   "v": [
+    0,
+    3.3
+   ],
+   "wire": "黄"
+  }
+ ],
+ "verified": false,
+ "stallA": 0.6,
+ "note": "轴 3mm D 型，在 +y 方向。线色：红 M+ 白 M− 黑 编码器 VCC 蓝 GND 绿 A 黄 B。"
+}

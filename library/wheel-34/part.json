@@ -1,0 +1,13 @@
+{
+ "name": "N20 橡胶轮 Ø34",
+ "kind": "wheel",
+ "size": [
+  12,
+  34,
+  34
+ ],
+ "shape": "wheel",
+ "color": "#111",
+ "verified": true,
+ "pins": []
+}

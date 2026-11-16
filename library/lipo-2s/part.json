@@ -1,0 +1,31 @@
+{
+ "name": "2S 锂电（红车）",
+ "kind": "battery",
+ "size": [
+  34,
+  70,
+  18
+ ],
+ "color": "#2c5",
+ "verified": false,
+ "pins": [
+  {
+   "id": "B+",
+   "x": -4,
+   "y": -35,
+   "type": "power_src",
+   "v": [
+    6.4,
+    8.4
+   ]
+  },
+  {
+   "id": "B-",
+   "x": 4,
+   "y": -35,
+   "type": "gnd"
+  }
+ ],
+ "maxA": 20,
+ "shape": "box"
+}

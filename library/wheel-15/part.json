@@ -1,0 +1,14 @@
+{
+ "name": "车轮 Ø15",
+ "kind": "wheel",
+ "size": [
+  6,
+  15,
+  15
+ ],
+ "shape": "wheel",
+ "color": "#111",
+ "verified": false,
+ "pins": [],
+ "note": "1:32 原车轮约 Ø15，量实物。"
+}

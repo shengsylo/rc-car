@@ -1,0 +1,49 @@
+{
+ "name": "Mitoot 3.7g 金属齿舵机",
+ "kind": "servo",
+ "size": [
+  8.5,
+  20.2,
+  18.2
+ ],
+ "color": "#222",
+ "pins": [
+  {
+   "id": "SIG",
+   "x": -2.54,
+   "y": -10,
+   "type": "logic_in",
+   "fw": "SERVO",
+   "v": [
+    0,
+    5
+   ],
+   "need": [
+    "pwm"
+   ],
+   "wire": "黄"
+  },
+  {
+   "id": "V+",
+   "x": 0,
+   "y": -10,
+   "type": "power_in",
+   "v": [
+    2.8,
+    4.2
+   ],
+   "wire": "红"
+  },
+  {
+   "id": "GND",
+   "x": 2.54,
+   "y": -10,
+   "type": "gnd",
+   "wire": "棕"
+  }
+ ],
+ "verified": true,
+ "stallA": 0.5,
+ "note": "2.8–4.2V，1S 直接供电。堵转电流大，舵机线要短、电源加 470µF。",
+ "shape": "box"
+}

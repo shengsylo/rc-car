@@ -1,0 +1,254 @@
+{
+ "name": "ESP32-C3 SuperMini",
+ "kind": "mcu",
+ "soc": "esp32c3",
+ "target": "c3",
+ "size": [
+  18,
+  22.5,
+  3.2
+ ],
+ "color": "#1f3a5f",
+ "pins": [
+  {
+   "id": "5V",
+   "x": -7.6,
+   "y": 8.9,
+   "type": "power_in",
+   "v": [
+    3.5,
+    5.5
+   ],
+   "note": "1S 锂电直接接这里（板载 LDO 压差约 0.3V，电池低于 3.6V 时 3V3 会掉）"
+  },
+  {
+   "id": "GND",
+   "x": -7.6,
+   "y": 6.36,
+   "type": "gnd"
+  },
+  {
+   "id": "3V3",
+   "x": -7.6,
+   "y": 3.82,
+   "type": "power_out",
+   "v": [
+    3.3,
+    3.3
+   ],
+   "maxmA": 500
+  },
+  {
+   "id": "GPIO4",
+   "x": -7.6,
+   "y": 1.28,
+   "type": "gpio",
+   "gpio": 4,
+   "caps": [
+    "io",
+    "pwm",
+    "adc"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO3",
+   "x": -7.6,
+   "y": -1.26,
+   "type": "gpio",
+   "gpio": 3,
+   "caps": [
+    "io",
+    "pwm",
+    "adc"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO2",
+   "x": -7.6,
+   "y": -3.8,
+   "type": "gpio",
+   "gpio": 2,
+   "caps": [
+    "io",
+    "pwm",
+    "adc"
+   ],
+   "v": [
+    0,
+    3.3
+   ],
+   "strap": "开机时要高电平（有内部上拉，别接会拉低的东西）"
+  },
+  {
+   "id": "GPIO1",
+   "x": -7.6,
+   "y": -6.34,
+   "type": "gpio",
+   "gpio": 1,
+   "caps": [
+    "io",
+    "pwm",
+    "adc"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO0",
+   "x": -7.6,
+   "y": -8.88,
+   "type": "gpio",
+   "gpio": 0,
+   "caps": [
+    "io",
+    "pwm",
+    "adc"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO5",
+   "x": 7.6,
+   "y": 8.9,
+   "type": "gpio",
+   "gpio": 5,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO6",
+   "x": 7.6,
+   "y": 6.36,
+   "type": "gpio",
+   "gpio": 6,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO7",
+   "x": 7.6,
+   "y": 3.82,
+   "type": "gpio",
+   "gpio": 7,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO8",
+   "x": 7.6,
+   "y": 1.28,
+   "type": "gpio",
+   "gpio": 8,
+   "caps": [
+    "io",
+    "pwm",
+    "i2c"
+   ],
+   "v": [
+    0,
+    3.3
+   ],
+   "strap": "开机时要高电平；板载 LED 在这脚"
+  },
+  {
+   "id": "GPIO9",
+   "x": 7.6,
+   "y": -1.26,
+   "type": "gpio",
+   "gpio": 9,
+   "caps": [
+    "io",
+    "pwm",
+    "i2c"
+   ],
+   "v": [
+    0,
+    3.3
+   ],
+   "strap": "BOOT 按键；开机时低电平会进下载模式"
+  },
+  {
+   "id": "GPIO10",
+   "x": 7.6,
+   "y": -3.8,
+   "type": "gpio",
+   "gpio": 10,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ]
+  },
+  {
+   "id": "GPIO20",
+   "x": 7.6,
+   "y": -6.34,
+   "type": "gpio",
+   "gpio": 20,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ],
+   "note": "RX0"
+  },
+  {
+   "id": "GPIO21",
+   "x": 7.6,
+   "y": -8.88,
+   "type": "gpio",
+   "gpio": 21,
+   "caps": [
+    "io",
+    "pwm"
+   ],
+   "v": [
+    0,
+    3.3
+   ],
+   "note": "TX0"
+  }
+ ],
+ "drawmA": 120,
+ "verified": false,
+ "price": "RM18（MakerHub）",
+ "note": "USB-C 在上边。GPIO 都是 3.3V，不能直接接 5V 信号。",
+ "shape": "box"
+}
