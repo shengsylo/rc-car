@@ -105,14 +105,17 @@ def upsert_tasks(rows):
     return len(rows)
 
 
+ID_PREFIX = "RC"  # shared Supabase table: this repo only touches ids starting with this
+
+
 def delete_tasks_not_in(ids):
-    """Delete DB trackers that no longer exist locally. An empty list is refused (it would wipe the table)."""
+    """Delete DB trackers (only ids starting with ID_PREFIX) that no longer exist locally. An empty list is refused (it would wipe the table)."""
     ids = [str(i) for i in ids]
     if not ids:
         raise SbError("delete_tasks_not_in: empty id list, refusing to delete every tracker")
     if any(not i.isalnum() for i in ids):
         raise SbError("delete_tasks_not_in: tracker ids must be alphanumeric")
-    _, _, gone = request("DELETE", "tasks?id=" + urllib.parse.quote(f"not.in.({','.join(ids)})", safe="().,"),
+    _, _, gone = request("DELETE", "tasks?id=" + urllib.parse.quote(f"not.in.({','.join(ids)})", safe="().,") + "&id=like." + urllib.parse.quote(ID_PREFIX + "*", safe="*"),
                          prefer="return=representation")
     return len(gone or [])
 

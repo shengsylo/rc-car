@@ -12,12 +12,12 @@
 
 ## Tracker 规则（`.claude/settings.json` 的 hooks 强制）
 
-每件事一个 tracker：`private/t/T00N-slug/task.json`。`docs/` 会被复制到公开网站，tracker 内容绝不能写进 `docs/`。
+每件事一个 tracker：`private/t/RC00N-slug/task.json`。`docs/` 会被复制到公开网站，tracker 内容绝不能写进 `docs/`。
 
 - 新工作：`python3 tools/tracker.py new "标题"`，再填 JSON。
 - 进行中：编辑那个 `task.json`（`problem`, `idea`, `proof`, `solution`, `path`, `issues`, `data`, `files`, `log`）。字段格式见 `tools/tracker.py` 里的 `SKELETON`。
 - 改了 `task.json` 后 hook 会把所有 tracker 推到私有 Supabase 表 `tasks`（手动：`python3 tools/tracker.py build`）。推送失败只打警告，下次 build 重试。Stop hook：`tools/ firmware/ pit_display/ studio/ projects/ library/` 有改动但 tracker 没更新，就不许结束这一轮。
-- `docs/` 只是空壳（`index.html`, `task.html?id=T00N`, `app.js`, `config.js`），登录后才从 Supabase 读内容（RLS，见 `supabase/schema.sql`）。不要手写 tracker HTML。设计改 `tools/*.template.html`，不要改 `docs/` 里的副本。
+- `docs/` 只是空壳（`index.html`, `task.html?id=RC00N`, `app.js`, `config.js`），登录后才从 Supabase 读内容（RLS，见 `supabase/schema.sql`）。不要手写 tracker HTML。设计改 `tools/*.template.html`，不要改 `docs/` 里的副本。
 - **Supabase 要用独立的新 project**（不要和 xau-lab 共用：`tasks.id` 是 T001… 会撞）。Keys 放 `.env`（git-ignored）：`SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SECRET_KEY`。secret key 只给 `tools/sb.py` 读，绝不能出现在 `docs/`、日志、tracker 或任何 tracked 文件。`python3 tools/sb.py check` 检查。
 - 文字字段只用 `` `code` ``、`**bold**` 和换行。tracker 用中文写，短、带数字。
 

@@ -319,7 +319,7 @@
     const my = ++gen;
     state('loading', '读取中…');
     try {
-      const rows = await api('/rest/v1/tasks?select=id,slug,data,updated_at&order=id.desc');
+      const rows = await api('/rest/v1/tasks?select=id,slug,data,updated_at&id=like.RC*&order=id.desc');
       if (my !== gen) return;
       const tasks = arr(rows).map(normalize).sort(newestFirst);
       if (!tasks.length) {

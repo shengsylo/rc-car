@@ -3,7 +3,7 @@
 The public site in docs/ is an empty shell: tracker content is pushed to a private Supabase
 database and the browser fetches it only after login. Nothing with content is written to docs/.
 
-  python3 tools/tracker.py new "Title here"     create private/t/T00N-slug/task.json
+  python3 tools/tracker.py new "Title here"     create private/t/RC00N-slug/task.json
   python3 tools/tracker.py build                copy the page shells to docs/, write docs/config.js,
                                                 push every tracker to Supabase
   python3 tools/tracker.py hook-post            (Claude Code PostToolUse hook, reads JSON on stdin)
@@ -80,7 +80,7 @@ def build():
     Returns (trackers, site files written, push result text, push ok). Tracker content never enters docs/."""
     tasks = load_tasks()
     ids = [t["id"] for t in tasks]
-    if any(not i for i in ids) or len(set(ids)) != len(ids):
+    if any(not i or not i.startswith(sb.ID_PREFIX) for i in ids) or len(set(ids)) != len(ids):
         raise SystemExit("tracker: every task.json needs a unique non-empty id")
     DOCS.mkdir(exist_ok=True)
     n = 0
@@ -98,8 +98,8 @@ def build():
 
 def new(title):
     TASKS.mkdir(parents=True, exist_ok=True)
-    nums = [int(m.group(1)) for d in TASKS.iterdir() if (m := re.match(r"T(\d+)", d.name))]
-    tid = f"T{max(nums, default=0) + 1:03d}"
+    nums = [int(m.group(1)) for d in TASKS.iterdir() if (m := re.match(r"RC(\d+)", d.name))]
+    tid = f"RC{max(nums, default=0) + 1:03d}"
     slug = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")[:40] or "task"
     d = TASKS / f"{tid}-{slug}"
     d.mkdir()
