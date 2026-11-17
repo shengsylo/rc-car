@@ -353,12 +353,12 @@ function lipo(l: LibPart) {
   const s = new THREE.Shape(); s.moveTo(-w / 2 + r, -h / 2); s.lineTo(w / 2 - r, -h / 2); s.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r); s.lineTo(w / 2, h / 2 - r); s.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2); s.lineTo(-w / 2 + r, h / 2); s.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r); s.lineTo(-w / 2, -h / 2 + r); s.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
   const geo = new THREE.ExtrudeGeometry(s, { depth: d - 3, bevelEnabled: false, curveSegments: 8 }); geo.rotateX(-Math.PI / 2); geo.translate(0, -d / 2 + 3, 0);
   const isLava = l.id.includes('lava');
-  const tex = labelTexture(d - 3, w, isLava ? '#e8a500' : '#2c5', [
-    { t: isLava ? 'LAVA II' : '2S LiPo', x: -(d - 3) * 0.2, y: w * 0.12, size: w * 0.3, color: '#111', bold: true },
-    { t: isLava ? '1S 580mAh 95C  HV 4.35V' : '7.4V', x: -(d - 3) * 0.08, y: -w * 0.25, size: w * 0.13, color: '#111' },
-    { t: isLava ? 'BETAFPV' : '', x: (d - 3) * 0.33, y: 0, size: w * 0.2, color: '#111', bold: true }]);
-  tex.center.set(0.5, 0.5); tex.rotation = Math.PI / 2;
-  const body = new THREE.Mesh(geo, [new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3 }), mat(isLava ? '#c88d00' : '#1a4', { roughness: 0.3 })]);
+  // 标签画在顶面：画布横向 = 电池宽，纵向 = 电池长，字旋转 90°
+  const tex = labelTexture(w, d, isLava ? '#e8a500' : '#2c5', [
+    { t: isLava ? 'LAVA II' : '2S LiPo', x: -w * 0.12, y: -d * 0.12, size: w * 0.3, color: '#111', bold: true, rot: -90 },
+    { t: isLava ? '1S 580mAh 95C  HV 4.35V' : '7.4V', x: w * 0.25, y: -d * 0.05, size: w * 0.13, color: '#111', rot: -90 },
+    { t: isLava ? 'BETAFPV' : '', x: 0, y: d * 0.3, size: w * 0.2, color: '#111', bold: true, rot: -90 }]);
+  const body = new THREE.Mesh(geo, [mat(isLava ? '#c88d00' : '#1a4', { roughness: 0.3 }), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.3 })]);   // 0 = 两端，1 = 四周（顶面贴标签）
   // ExtrudeGeometry 侧面 UV：重新按顶面投影
   const pos = geo.attributes.position as THREE.BufferAttribute; const uv = geo.attributes.uv as THREE.BufferAttribute;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, (pos.getX(i) + w / 2) / w, (pos.getY(i) + d / 2) / d);

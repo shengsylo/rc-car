@@ -6,13 +6,14 @@ import { View3D } from '../project/View3D';
 import { Wiring } from '../project/Wiring';
 import { Timeline } from '../project/Timeline';
 import { Inspector } from '../project/Inspector';
+import { Explainer } from '../project/Explainer';
 
 export function Project() {
   const projects = useStore(s => s.st!.projects);
   const { id, doc, tool, gizmo, dirty, past, future, set } = useP();
   const [shell, setShell] = useState(true);
   const [dims, setDims] = useState(false);
-  const [split, setSplit] = useState<'both' | '3d' | '2d'>('both');
+  const [split, setSplit] = useState<'both' | '3d' | '2d' | 'ex'>('both');
   useEffect(() => {
     if (id) return;
     let want = ''; try { want = localStorage.getItem('rc.project') || ''; } catch { }
@@ -61,16 +62,17 @@ export function Project() {
         <button className="ghost xs" disabled={!past.length} onClick={undo}>撤销</button>
         <button className="ghost xs" disabled={!future.length} onClick={redo}>重做</button>
         <span className="sep" />
-        <div className="seg">{([['both', '3D + 接线'], ['3d', '3D'], ['2d', '接线']] as const).map(([v, l]) => <button key={v} className={split === v ? 'on' : ''} onClick={() => setSplit(v)}>{l}</button>)}</div>
+        <div className="seg">{([['both', '3D + 接线'], ['3d', '3D'], ['2d', '接线'], ['ex', '▶ 动画示意']] as const).map(([v, l]) => <button key={v} className={split === v ? 'on' : ''} onClick={() => setSplit(v)}>{l}</button>)}</div>
         <label className="check small"><input type="checkbox" checked={shell} onChange={e => setShell(e.target.checked)} />车壳</label>
         <label className="check small"><input type="checkbox" checked={dims} onChange={e => setDims(e.target.checked)} />全部尺寸</label>
         <span className="grow" />
         <span className={'mono small ' + (dirty ? 'dim' : 'okc')}>{dirty ? '未保存…' : '已保存'}</span>
       </div>
-      {doc ? <div className="pbody">
+      {doc ? <div className={'pbody' + (split === 'ex' ? ' exmode' : '')}>
         <div className={'views ' + split}>
+          {split === 'ex' ? <div className="pane"><Explainer /></div> : <>
           {split !== '2d' && <div className="pane"><div className="pane-t">3D 布局</div><View3D showShell={shell} showDims={dims} /></div>}
-          {split !== '3d' && <div className="pane"><div className="pane-t">接线图（俯视 · 真实尺寸）</div><Wiring /></div>}
+          {split !== '3d' && <div className="pane"><div className="pane-t">接线图（俯视 · 真实尺寸）</div><Wiring /></div>}</>}
         </div>
         <Inspector />
         <Timeline />

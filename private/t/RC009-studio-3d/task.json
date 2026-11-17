@@ -44,6 +44,10 @@
     {
       "step": "真实零件 3D 模型 + 尺寸标注",
       "status": "done"
+    },
+    {
+      "step": "动画示意图（讲解/直播用）",
+      "status": "done"
     }
   ],
   "issues": [
@@ -69,7 +73,8 @@
     "tools/gen_library.py",
     "tools/gen_projects.py",
     "lib/projects.js",
-    "studio/src/project/models.ts"
+    "studio/src/project/models.ts",
+    "studio/src/project/Explainer.tsx"
   ],
   "log": [
     {
@@ -79,6 +84,10 @@
     {
       "at": "2026-11-16",
       "text": "3D 改成真实零件模型（`studio/src/project/models.ts`）：PCB 板厚+丝印脚名、排针、芯片字、USB-C、按键、LED、电容、端子、散热片、N20 齿轮箱+D 轴+6 色线、舵机耳朵+舵臂、LAVA 标签+BT2.0、TX06 镜头+35mm 天线、轮胎胎纹+轮毂。选中显示 mm/cm 尺寸（3D 和 2D），F 键对准。"
+    },
+    {
+      "at": "2026-11-17",
+      "text": "加「▶ 动画示意」：「你开，车动。」讲解图。零件用 3D 模型渲染成俯视图，彩色导线自动走线，电流亮点按信号流动（油门 PWM、舵机脉冲、电机电流、电源/地），电机轴和舵机臂会动；右边接线图例 + LIVE 面板（油门/转向/电流/电池/速度/状态），可播放时间轴或 WASD 自己开，可全屏。"
     }
   ]
 }
