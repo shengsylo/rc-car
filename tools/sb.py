@@ -231,7 +231,7 @@ def add_login(name=None):
         raise SbError(f"建账号失败: HTTP {e.code} {str(err.get('msg') or err.get('message') or '')[:160]}") from None
     except (urllib.error.URLError, TimeoutError, OSError) as e:
         raise SbError(f"建账号失败: Supabase 连不上 ({type(getattr(e, 'reason', e)).__name__})") from None
-    request("POST", "owners", [{"user_id": uid}], prefer="return=minimal")
+    request("POST", "owners", [{"user_id": uid, "project": "rc"}], prefer="return=minimal")   # 只能看 RC* 任务（supabase/split_projects.sql）
     print(f"完成：网站用「{name}」+ 你的密码登录。")
     return 0
 

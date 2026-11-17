@@ -1,4 +1,5 @@
--- rc-car private content store (same schema as xau-lab; use a SEPARATE Supabase project).
+-- rc-car private content store (same schema as xau-lab). NOTE: rc-car now SHARES xau-lab's Supabase project;
+-- after this file, run supabase/split_projects.sql so rc logins only see RC* rows and xau logins never see them.
 -- Run this whole file once in the Supabase dashboard: SQL Editor -> New query -> paste -> Run.
 -- It is safe to run again: no data is dropped, and every policy on the three tables is removed and
 -- rebuilt, so a stray policy added by hand or by a dashboard template does not survive a re-run.

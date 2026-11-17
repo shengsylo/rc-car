@@ -40,9 +40,9 @@
   ],
   "issues": [
     {
-      "text": "owners 表跟 xau-lab 共用：rc-car 的登录账号也能看 xau-lab 的任务（反过来也一样）。要分开就给 tasks 加一列项目再改 RLS。",
+      "text": "owners 表跟 xau-lab 共用：rc-car 的登录账号也能看 xau-lab 的任务（反过来也一样）。要分开就给 tasks 加一列项目再改 RLS。\n→ 已解决：`supabase/split_projects.sql`（owners.project = rc / xau，RLS 按 id 前缀分开）。",
       "severity": "low",
-      "open": true
+      "open": false
     }
   ],
   "data": [],
@@ -63,6 +63,10 @@
     {
       "at": "2026-11-16",
       "text": "网站去掉 xau-lab 的黄金页面：标题「RC 地下赛车 · 任务板」、赛车红、去掉随机游走动画、加「打开 RC Studio 3D」按钮。登录改用户名（`lotion` → `lotion@rc-car.local`），`python3 tools/sb.py add-login lotion` 建账号。Supabase 密码最少 6 位，`123` 不行。"
+    },
+    {
+      "at": "2026-11-17",
+      "text": "rc 和 xau 在数据库层分开：owners 加 project 列，rc 账号只读 RC*，xau 账号只读其他 + status。要在 Supabase SQL Editor 跑一次 `supabase/split_projects.sql`。线上还是旧的黄金页面，因为改版后还没跑 publish.sh。"
     }
   ]
 }
