@@ -67,6 +67,10 @@
     {
       "at": "2026-11-17",
       "text": "rc 和 xau 在数据库层分开：owners 加 project 列，rc 账号只读 RC*，xau 账号只读其他 + status。要在 Supabase SQL Editor 跑一次 `supabase/split_projects.sql`。线上还是旧的黄金页面，因为改版后还没跑 publish.sh。"
+    },
+    {
+      "at": "2026-11-17",
+      "text": "rc 网站去掉「正在执行」面板（读的是 xau-lab 的 status 表：Dukascopy 下载、规则验证），task.html 只接受 RC 编号。"
     }
   ]
 }
